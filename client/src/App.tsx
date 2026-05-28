@@ -13,11 +13,11 @@ import CoachingDashboard from './pages/coaching/CoachingDashboard';
 
 // Custom Wrapper layout for dashboards to share the TopBar & Sidebar shell
 const DashboardLayout: React.FC<{ children: React.ReactNode; title: string }> = ({ children, title }) => {
-  const [sidebarOpen, setSidebarOpen] = React.useState(() => window.innerWidth >= 768);
+  const [sidebarOpen, setSidebarOpen] = React.useState(() => window.innerWidth >= 1024);
   
   React.useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 768) {
+      if (window.innerWidth >= 1024) {
         setSidebarOpen(true);
       } else {
         setSidebarOpen(false);
@@ -29,25 +29,30 @@ const DashboardLayout: React.FC<{ children: React.ReactNode; title: string }> = 
   
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0f] text-slate-800 dark:text-slate-100 flex transition-colors duration-300">
-      {/* Mobile backdrop overlay */}
+      {/* Mobile backdrop overlay — only visible on small screens */}
       {sidebarOpen && (
         <div 
-          className="print-hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden transition-opacity duration-300"
+          className="print-hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden transition-opacity duration-300"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar drawer */}
-      <div className={`print-hidden fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 md:relative md:translate-x-0 md:h-screen md:sticky md:top-0 flex-shrink-0 ${
-        sidebarOpen ? 'translate-x-0 w-0 md:w-64' : '-translate-x-80 md:translate-x-0 w-0 md:w-20'
-      }`}>
-        {/* We import Sidebar component here */}
+      {/* Sidebar:
+          - Mobile/tablet (<1024px): fixed overlay, slides in/out
+          - Desktop (≥1024px): sticky in-flow, always visible, pushes content */}
+      <div className={`print-hidden flex-shrink-0 transition-all duration-300
+        fixed inset-y-0 left-0 z-40
+        lg:sticky lg:top-0 lg:h-screen lg:z-auto
+        ${sidebarOpen
+          ? 'w-64 translate-x-0'
+          : 'w-64 -translate-x-full lg:translate-x-0 lg:w-20'
+        }`}
+      >
         <SidebarShell isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
       </div>
 
-      {/* Main viewport */}
+      {/* Main viewport — flex-1 takes remaining width after sidebar on desktop */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        {/* Top Header */}
         <TopBarShell 
           sidebarOpen={sidebarOpen} 
           setSidebarOpen={setSidebarOpen} 
@@ -55,7 +60,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode; title: string }> = 
         />
         
         {/* Main printable scroll container */}
-        <main className="flex-grow pt-20 pb-12 px-4 md:px-8 overflow-y-auto print-container">
+        <main className="flex-grow pt-20 pb-12 px-4 lg:px-8 overflow-y-auto print-container">
           <div className="max-w-7xl mx-auto space-y-6">
             {children}
           </div>
@@ -64,6 +69,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode; title: string }> = 
     </div>
   );
 };
+
 
 // Simplified local components to prevent early dependency circular errors before files are fully written
 import { Sidebar as SidebarShell } from './components/layout/Sidebar';

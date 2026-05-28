@@ -33,8 +33,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   const activeAlerts = notifications || [];
 
   return (
-    <header className={`h-16 fixed top-0 right-0 z-30 flex items-center justify-between px-4 md:px-6 bg-brand-card/90 border-b border-brand-border/40 backdrop-blur-md transition-all duration-300 ${
-      sidebarOpen ? 'left-0 md:left-64' : 'left-0 md:left-20'
+    <header className={`h-16 fixed top-0 right-0 z-30 flex items-center justify-between px-4 lg:px-6 bg-brand-card/90 border-b border-brand-border/40 backdrop-blur-md transition-all duration-300 ${
+      sidebarOpen ? 'left-0 lg:left-64' : 'left-0 lg:left-20'
     }`}>
       
       {/* Mobile Menu & Dashboard Title */}
