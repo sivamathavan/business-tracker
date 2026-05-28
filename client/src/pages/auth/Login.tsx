@@ -93,7 +93,7 @@ export const Login: React.FC = () => {
             <span className="text-2xl font-black text-white">⚡</span>
           </div>
           <h2 className="text-2xl font-extrabold text-white mt-4 font-heading tracking-tight">
-            Rturox Command Center
+            BusinessTracker
           </h2>
           <p className="text-[11px] text-slate-400 font-semibold tracking-widest uppercase mt-1">
             Multi-Tenant Business Terminal
@@ -135,9 +135,9 @@ export const Login: React.FC = () => {
                   className="w-full pl-3 pr-10 py-2.5 bg-slate-900 border border-brand-border/60 focus:border-brand-tech rounded-xl text-xs text-slate-200 font-semibold focus:outline-none transition-all duration-200 appearance-none"
                 >
                   <option value="tech">💻 Business 1 — Rturox Technology</option>
-                  <option value="realestate">🏠 Business 2 — DreamKey Properties</option>
-                  <option value="training">🎓 Business 3 — Rturox Tech Training</option>
-                  <option value="coaching">🌟 Business 4 — Rturox Coaching Centre</option>
+                  <option value="realestate">🏠 Business 2 — AadanaTharakar</option>
+                  <option value="training">🎓 Business 3 — RturoxAcademy</option>
+                  <option value="coaching">🌟 Business 4 — CKS Tuition</option>
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
                   <svg className="fill-current h-4 w-4" viewBox="0 0 20 20">

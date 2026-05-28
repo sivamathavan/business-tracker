@@ -43,7 +43,7 @@ const createCourse = async (req, res, next) => {
                 created_by: req.user?.userId || 'system'
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Tech Training', 'CREATE', `Course: ${course_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'RturoxAcademy', 'CREATE', `Course: ${course_name}`);
         return res.status(201).json({ success: true, data: course });
     }
     catch (error) {
@@ -76,7 +76,7 @@ const updateCourse = async (req, res, next) => {
                 is_pinned: is_pinned !== undefined ? is_pinned : existing.is_pinned
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Tech Training', 'UPDATE', `Course: ${updated.course_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'RturoxAcademy', 'UPDATE', `Course: ${updated.course_name}`);
         return res.status(200).json({ success: true, data: updated });
     }
     catch (error) {
@@ -94,7 +94,7 @@ const deleteCourse = async (req, res, next) => {
             where: { course_id: id },
             data: { deleted_at: new Date() }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Tech Training', 'DELETE', `Course: ${course.course_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'RturoxAcademy', 'DELETE', `Course: ${course.course_name}`);
         return res.status(200).json({ success: true, message: 'Course deleted successfully' });
     }
     catch (error) {
@@ -135,7 +135,7 @@ const createStudent = async (req, res, next) => {
                 created_by: req.user?.userId || 'system'
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Tech Training', 'CREATE', `Student: ${student_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'RturoxAcademy', 'CREATE', `Student: ${student_name}`);
         return res.status(201).json({ success: true, data: newStudent });
     }
     catch (error) {
@@ -164,7 +164,7 @@ const updateStudent = async (req, res, next) => {
                 notes: notes !== undefined ? notes : existing.notes
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Tech Training', 'UPDATE', `Student: ${updated.student_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'RturoxAcademy', 'UPDATE', `Student: ${updated.student_name}`);
         return res.status(200).json({ success: true, data: updated });
     }
     catch (error) {
@@ -182,7 +182,7 @@ const deleteStudent = async (req, res, next) => {
             where: { student_id: id },
             data: { deleted_at: new Date() }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Tech Training', 'DELETE', `Student: ${student.student_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'RturoxAcademy', 'DELETE', `Student: ${student.student_name}`);
         return res.status(200).json({ success: true, message: 'Student deleted successfully' });
     }
     catch (error) {
@@ -223,7 +223,7 @@ const createBatch = async (req, res, next) => {
                 created_by: req.user?.userId || 'system'
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Tech Training', 'CREATE', `Batch: ${batch_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'RturoxAcademy', 'CREATE', `Batch: ${batch_name}`);
         return res.status(201).json({ success: true, data: batch });
     }
     catch (error) {
@@ -252,7 +252,7 @@ const updateBatch = async (req, res, next) => {
                 status: status || existing.status
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Tech Training', 'UPDATE', `Batch: ${updated.batch_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'RturoxAcademy', 'UPDATE', `Batch: ${updated.batch_name}`);
         return res.status(200).json({ success: true, data: updated });
     }
     catch (error) {
@@ -270,7 +270,7 @@ const deleteBatch = async (req, res, next) => {
             where: { batch_id: id },
             data: { deleted_at: new Date() }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Tech Training', 'DELETE', `Batch: ${batch.batch_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'RturoxAcademy', 'DELETE', `Batch: ${batch.batch_name}`);
         return res.status(200).json({ success: true, message: 'Batch deleted successfully' });
     }
     catch (error) {
@@ -306,7 +306,7 @@ const createStudyLog = async (req, res, next) => {
                 created_by: req.user?.userId || 'system'
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Tech Training', 'CREATE', `Study Log: ${course_name} (${hours_studied} hrs)`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'RturoxAcademy', 'CREATE', `Study Log: ${course_name} (${hours_studied} hrs)`);
         return res.status(201).json({ success: true, data: log });
     }
     catch (error) {
@@ -330,7 +330,7 @@ const updateStudyLog = async (req, res, next) => {
                 topics_covered: topics_covered !== undefined ? topics_covered : existing.topics_covered
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Tech Training', 'UPDATE', `Study Log: ${updated.course_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'RturoxAcademy', 'UPDATE', `Study Log: ${updated.course_name}`);
         return res.status(200).json({ success: true, data: updated });
     }
     catch (error) {
@@ -348,7 +348,7 @@ const deleteStudyLog = async (req, res, next) => {
             where: { log_id: id },
             data: { deleted_at: new Date() }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Tech Training', 'DELETE', `Study Log: ${log.course_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'RturoxAcademy', 'DELETE', `Study Log: ${log.course_name}`);
         return res.status(200).json({ success: true, message: 'Study log deleted successfully' });
     }
     catch (error) {
@@ -584,7 +584,7 @@ const markTrainingAttendance = async (req, res, next) => {
                 });
             }
         }
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Tech Training', 'UPDATE', `Marked attendance for ${date}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'RturoxAcademy', 'UPDATE', `Marked attendance for ${date}`);
         return res.status(200).json({ success: true, message: 'Attendance marked successfully' });
     }
     catch (error) {

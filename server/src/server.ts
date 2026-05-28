@@ -45,7 +45,7 @@ app.use((req, _res, next) => {
 
 // Root check route
 app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'OK', service: 'Rturox Command Center API' });
+  res.status(200).json({ status: 'OK', service: 'BusinessTracker API' });
 });
 
 // Mounting Sub-routes
@@ -67,7 +67,7 @@ app.use(errorHandler);
 // Start Server
 app.listen(PORT, () => {
   console.log(`===============================================`);
-  console.log(`⚡ Rturox Command Center API Server running...`);
+  console.log(`⚡ BusinessTracker API Server running...`);
   console.log(`👉 Base URL: http://localhost:${PORT}/api/v1`);
   console.log(`👉 CORS Origin: ${CLIENT_URL}`);
   console.log(`===============================================`);

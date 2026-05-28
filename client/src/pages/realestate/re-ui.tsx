@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// DreamKey Properties — Shared UI Pieces
+// AadanaTharakar — Shared UI Pieces
 // ═══════════════════════════════════════
 import React from 'react';
 import { X, Search } from 'lucide-react';

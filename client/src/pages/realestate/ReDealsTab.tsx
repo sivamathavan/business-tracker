@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// DreamKey Properties — Deals Tab
+// AadanaTharakar — Deals Tab
 // ═══════════════════════════════════════
 import React, { useState, useMemo, useCallback } from 'react';
 import { Plus, Edit3, Trash2, Download, Calendar, ChevronRight } from 'lucide-react';
@@ -71,13 +71,13 @@ export const ReDealsTab: React.FC<Props> = ({ deals, onSave, onDelete, onUpdateS
 
   const re_exportCSV = () => {
     const data = filtered.map(d => ({ Title: d.title, Type: d.deal_type, Status: d.status, 'Property Type': d.property_type, District: d.district, 'Property Value': d.property_value, 'Commission': d.commission_amount, 'Received': d.commission_received, Seller: d.seller_name, Buyer: d.buyer_name }));
-    exportToCSV(data, 'dreamkey_deals');
+    exportToCSV(data, 'aadanatharakar_deals');
   };
 
   const re_exportPDF = () => {
     const headers = ['Title', 'Type', 'Status', 'Value', 'Commission', 'Received'];
     const rows = filtered.map(d => [d.title, d.deal_type, d.status, formatINR(d.property_value), formatINR(d.commission_amount), formatINR(d.commission_received)]);
-    exportToPDF('DreamKey — Deals', headers, rows, 'dreamkey_deals', [255, 107, 107]);
+    exportToPDF('AadanaTharakar — Deals', headers, rows, 'aadanatharakar_deals', [255, 107, 107]);
   };
 
   const updateForm = (partial: Partial<ReDeal>) => setForm(f => ({ ...f, ...partial }));

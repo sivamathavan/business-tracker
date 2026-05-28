@@ -14,7 +14,7 @@ interface TopBarProps {
 export const TopBar: React.FC<TopBarProps> = ({
   sidebarOpen,
   setSidebarOpen,
-  title = "Rturox Command Center",
+  title = "BusinessTracker",
   searchItems = [],
   onSearchSelect = () => {}
 }) => {

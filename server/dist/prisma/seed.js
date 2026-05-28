@@ -69,13 +69,13 @@ async function main() {
         data: { name: 'Rturox Technology', slug: 'tech' }
     });
     const reBiz = await prisma.business.create({
-        data: { name: 'DreamKey Properties', slug: 'realestate' }
+        data: { name: 'AadanaTharakar', slug: 'realestate' }
     });
     const trainingBiz = await prisma.business.create({
-        data: { name: 'Rturox Tech Training', slug: 'training' }
+        data: { name: 'RturoxAcademy', slug: 'training' }
     });
     const coachingBiz = await prisma.business.create({
-        data: { name: 'Rturox Coaching Centre', slug: 'coaching' }
+        data: { name: 'CKS Tuition', slug: 'coaching' }
     });
     console.log('Seeding Users...');
     const salt = bcrypt.genSaltSync(10);
@@ -277,7 +277,7 @@ async function main() {
     // ---------------------------------------------------------------------------
     // BUSINESS 2 - DREAMKEY PROPERTIES SEED
     // ---------------------------------------------------------------------------
-    console.log('Seeding DreamKey Properties Data...');
+    console.log('Seeding AadanaTharakar Data...');
     await prisma.rePerson.createMany({
         data: [
             { name: 'Karthik Selvam', person_type: 'Broker', mobile: '9876543210', email: 'karthik@mail.com', district: 'Madurai', area: 'Thirumangalam', company: 'SK Realty', rera_id: 'TN-RE-0012', commission_giver: true, commission_rate: 1.5, total_commission: 225000, status: 'Active', pinned: true, notes: 'Top performer Q1', specialization: 'Agricultural Land', created_by: 'dreamkey' },
@@ -301,7 +301,7 @@ async function main() {
     // ---------------------------------------------------------------------------
     // BUSINESS 3 - RTUROX TECH TRAINING SEED
     // ---------------------------------------------------------------------------
-    console.log('Seeding Rturox Tech Training Data...');
+    console.log('Seeding RturoxAcademy Data...');
     await prisma.trainingCourse.createMany({
         data: [
             {
@@ -487,7 +487,7 @@ async function main() {
             }
         });
     }
-    console.log('Seeding Rturox Coaching Centre Data...');
+    console.log('Seeding CKS Tuition Data...');
     // Create 10 sample coaching students across various standards
     const coachStudentsData = [
         { name: 'Karthikeyan G', standard: '10th', parentMobile: '919010203040', fee: 3500, dept: 'General' },

@@ -145,7 +145,7 @@ export const TrainingDashboard: React.FC = () => {
           title: `Personal Study Target Overdue!`,
           message: `Course "${c.course_name}" is ${diffDays} days overdue from completion target.`,
           type: 'warning',
-          section: 'Rturox Tech Training'
+          section: 'RturoxAcademy'
         };
       });
 

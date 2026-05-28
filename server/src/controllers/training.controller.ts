@@ -58,7 +58,7 @@ export const createCourse = async (req: AuthenticatedRequest, res: Response, nex
       }
     });
 
-    await logActivity(req.user?.userId || 'system', 'Rturox Tech Training', 'CREATE', `Course: ${course_name}`);
+    await logActivity(req.user?.userId || 'system', 'RturoxAcademy', 'CREATE', `Course: ${course_name}`);
 
     return res.status(201).json({ success: true, data: course });
   } catch (error) {
@@ -107,7 +107,7 @@ export const updateCourse = async (req: AuthenticatedRequest, res: Response, nex
       }
     });
 
-    await logActivity(req.user?.userId || 'system', 'Rturox Tech Training', 'UPDATE', `Course: ${updated.course_name}`);
+    await logActivity(req.user?.userId || 'system', 'RturoxAcademy', 'UPDATE', `Course: ${updated.course_name}`);
 
     return res.status(200).json({ success: true, data: updated });
   } catch (error) {
@@ -126,7 +126,7 @@ export const deleteCourse = async (req: AuthenticatedRequest, res: Response, nex
       data: { deleted_at: new Date() }
     });
 
-    await logActivity(req.user?.userId || 'system', 'Rturox Tech Training', 'DELETE', `Course: ${course.course_name}`);
+    await logActivity(req.user?.userId || 'system', 'RturoxAcademy', 'DELETE', `Course: ${course.course_name}`);
 
     return res.status(200).json({ success: true, message: 'Course deleted successfully' });
   } catch (error) {
@@ -169,7 +169,7 @@ export const createStudent = async (req: AuthenticatedRequest, res: Response, ne
       }
     });
 
-    await logActivity(req.user?.userId || 'system', 'Rturox Tech Training', 'CREATE', `Student: ${student_name}`);
+    await logActivity(req.user?.userId || 'system', 'RturoxAcademy', 'CREATE', `Student: ${student_name}`);
 
     return res.status(201).json({ success: true, data: newStudent });
   } catch (error) {
@@ -200,7 +200,7 @@ export const updateStudent = async (req: AuthenticatedRequest, res: Response, ne
       }
     });
 
-    await logActivity(req.user?.userId || 'system', 'Rturox Tech Training', 'UPDATE', `Student: ${updated.student_name}`);
+    await logActivity(req.user?.userId || 'system', 'RturoxAcademy', 'UPDATE', `Student: ${updated.student_name}`);
 
     return res.status(200).json({ success: true, data: updated });
   } catch (error) {
@@ -219,7 +219,7 @@ export const deleteStudent = async (req: AuthenticatedRequest, res: Response, ne
       data: { deleted_at: new Date() }
     });
 
-    await logActivity(req.user?.userId || 'system', 'Rturox Tech Training', 'DELETE', `Student: ${student.student_name}`);
+    await logActivity(req.user?.userId || 'system', 'RturoxAcademy', 'DELETE', `Student: ${student.student_name}`);
 
     return res.status(200).json({ success: true, message: 'Student deleted successfully' });
   } catch (error) {
@@ -262,7 +262,7 @@ export const createBatch = async (req: AuthenticatedRequest, res: Response, next
       }
     });
 
-    await logActivity(req.user?.userId || 'system', 'Rturox Tech Training', 'CREATE', `Batch: ${batch_name}`);
+    await logActivity(req.user?.userId || 'system', 'RturoxAcademy', 'CREATE', `Batch: ${batch_name}`);
 
     return res.status(201).json({ success: true, data: batch });
   } catch (error) {
@@ -293,7 +293,7 @@ export const updateBatch = async (req: AuthenticatedRequest, res: Response, next
       }
     });
 
-    await logActivity(req.user?.userId || 'system', 'Rturox Tech Training', 'UPDATE', `Batch: ${updated.batch_name}`);
+    await logActivity(req.user?.userId || 'system', 'RturoxAcademy', 'UPDATE', `Batch: ${updated.batch_name}`);
 
     return res.status(200).json({ success: true, data: updated });
   } catch (error) {
@@ -312,7 +312,7 @@ export const deleteBatch = async (req: AuthenticatedRequest, res: Response, next
       data: { deleted_at: new Date() }
     });
 
-    await logActivity(req.user?.userId || 'system', 'Rturox Tech Training', 'DELETE', `Batch: ${batch.batch_name}`);
+    await logActivity(req.user?.userId || 'system', 'RturoxAcademy', 'DELETE', `Batch: ${batch.batch_name}`);
 
     return res.status(200).json({ success: true, message: 'Batch deleted successfully' });
   } catch (error) {
@@ -350,7 +350,7 @@ export const createStudyLog = async (req: AuthenticatedRequest, res: Response, n
       }
     });
 
-    await logActivity(req.user?.userId || 'system', 'Rturox Tech Training', 'CREATE', `Study Log: ${course_name} (${hours_studied} hrs)`);
+    await logActivity(req.user?.userId || 'system', 'RturoxAcademy', 'CREATE', `Study Log: ${course_name} (${hours_studied} hrs)`);
 
     return res.status(201).json({ success: true, data: log });
   } catch (error) {
@@ -376,7 +376,7 @@ export const updateStudyLog = async (req: AuthenticatedRequest, res: Response, n
       }
     });
 
-    await logActivity(req.user?.userId || 'system', 'Rturox Tech Training', 'UPDATE', `Study Log: ${updated.course_name}`);
+    await logActivity(req.user?.userId || 'system', 'RturoxAcademy', 'UPDATE', `Study Log: ${updated.course_name}`);
 
     return res.status(200).json({ success: true, data: updated });
   } catch (error) {
@@ -395,7 +395,7 @@ export const deleteStudyLog = async (req: AuthenticatedRequest, res: Response, n
       data: { deleted_at: new Date() }
     });
 
-    await logActivity(req.user?.userId || 'system', 'Rturox Tech Training', 'DELETE', `Study Log: ${log.course_name}`);
+    await logActivity(req.user?.userId || 'system', 'RturoxAcademy', 'DELETE', `Study Log: ${log.course_name}`);
 
     return res.status(200).json({ success: true, message: 'Study log deleted successfully' });
   } catch (error) {
@@ -640,7 +640,7 @@ export const markTrainingAttendance = async (req: AuthenticatedRequest, res: Res
       }
     }
 
-    await logActivity(req.user?.userId || 'system', 'Rturox Tech Training', 'UPDATE', `Marked attendance for ${date}`);
+    await logActivity(req.user?.userId || 'system', 'RturoxAcademy', 'UPDATE', `Marked attendance for ${date}`);
     return res.status(200).json({ success: true, message: 'Attendance marked successfully' });
   } catch (error) { next(error); }
 };

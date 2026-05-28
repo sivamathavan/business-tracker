@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-// DreamKey Properties — Main Dashboard Component
+// AadanaTharakar — Main Dashboard Component
 // ═══════════════════════════════════════════════════════════
 import React, { useState } from 'react';
 import { RE_TABS, type ReTabKey } from './re-types';

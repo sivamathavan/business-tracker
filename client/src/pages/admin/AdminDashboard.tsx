@@ -262,9 +262,9 @@ export const AdminDashboard: React.FC = () => {
               <Tooltip content={customTooltipINR} />
               <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
               <Bar dataKey="Rturox Technology" stackId="a" fill="#6c63ff" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="DreamKey Properties" stackId="a" fill="#ff6b6b" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="Rturox Tech Training" stackId="a" fill="#43e97b" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="Rturox Coaching Centre" stackId="a" fill="#f7b731" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="AadanaTharakar" stackId="a" fill="#ff6b6b" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="RturoxAcademy" stackId="a" fill="#43e97b" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="CKS Tuition" stackId="a" fill="#f7b731" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

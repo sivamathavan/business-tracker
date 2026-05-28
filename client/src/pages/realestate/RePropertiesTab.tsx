@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// DreamKey Properties — Properties Tab
+// AadanaTharakar — Properties Tab
 // ═══════════════════════════════════════
 import React, { useState, useMemo, useCallback } from 'react';
 import { Plus, Edit3, Trash2, Download, MapPin, ExternalLink } from 'lucide-react';
@@ -76,13 +76,13 @@ export const RePropertiesTab: React.FC<Props> = ({ properties, onSave, onDelete,
 
   const re_exportCSV = () => {
     const data = filtered.map(p => ({ Title: p.title, Type: p.property_type, Status: p.status, District: p.district, Area: p.area, Extent: p.extent, Price: p.price, 'Survey No': p.survey_number, Owner: p.owner_name, 'Doc Score': `${re_calcDocScore(p.doc_checklist)}%` }));
-    exportToCSV(data, 'dreamkey_properties');
+    exportToCSV(data, 'aadanatharakar_properties');
   };
 
   const re_exportPDF = () => {
     const headers = ['Title', 'Type', 'Status', 'District', 'Extent', 'Price', 'Survey No', 'Doc %'];
     const rows = filtered.map(p => [p.title, p.property_type, p.status, p.district, p.extent, formatINR(p.price), p.survey_number, `${re_calcDocScore(p.doc_checklist)}%`]);
-    exportToPDF('DreamKey — Properties', headers, rows, 'dreamkey_properties', [255, 107, 107]);
+    exportToPDF('AadanaTharakar — Properties', headers, rows, 'aadanatharakar_properties', [255, 107, 107]);
   };
 
   return (

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// DreamKey Properties — Analytics Tab
+// AadanaTharakar — Analytics Tab
 // ═══════════════════════════════════════
 import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend } from 'recharts';

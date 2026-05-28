@@ -149,7 +149,7 @@ export const CoachingDashboard: React.FC = () => {
         title: `Overdue Tuition Fees Alert!`,
         message: `${item.student_name} (${item.standard}) is ${item.unpaid_months_count} months overdue. Total: ${formatINR(item.total_amount_due)}`,
         type: 'error',
-        section: 'Rturox Coaching Centre'
+        section: 'CKS Tuition'
       }));
 
       useAuthStore.getState().setNotifications(overdueAlerts);
@@ -466,7 +466,7 @@ export const CoachingDashboard: React.FC = () => {
     if (!selectedStudentForFees) return;
     
     generateFeeReceipt({
-      businessName: 'Rturox Coaching Centre',
+      businessName: 'CKS Tuition',
       businessAddress: '123 Tech Park, Chennai, Tamil Nadu',
       receiptNumber: feeRecord.receipt_number || `REC-${feeRecord.fee_id.substring(0, 8).toUpperCase()}`,
       date: feeRecord.paid_date || new Date().toISOString(),
@@ -1378,7 +1378,7 @@ export const CoachingDashboard: React.FC = () => {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-brand-border/40 pb-5">
                       <div className="text-left">
                         <h2 className="text-lg md:text-xl font-extrabold text-white font-heading">
-                          ⚡ Rturox Coaching Centre
+                          ⚡ CKS Tuition
                         </h2>
                         <p className="text-xs text-slate-400 mt-1 font-semibold">
                           Tambaram West, Chennai | Academic Report Card

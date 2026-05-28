@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// DreamKey Properties — Types & Constants
+// AadanaTharakar — Types & Constants
 // ═══════════════════════════════════════
 
 export const RE_TABS = [

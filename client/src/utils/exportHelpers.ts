@@ -43,7 +43,7 @@ export const exportToPDF = (
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
   doc.setTextColor(22, 22, 31);
-  doc.text('⚡ Rturox Command Center', 14, 18);
+  doc.text('⚡ BusinessTracker', 14, 18);
 
   // Add Document Title
   doc.setFont('helvetica', 'normal');

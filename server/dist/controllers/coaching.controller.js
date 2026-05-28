@@ -55,7 +55,7 @@ const createCoachingStudent = async (req, res, next) => {
                 created_by: req.user?.userId || 'system'
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Coaching Centre', 'CREATE', `Coaching Student: ${student_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'CKS Tuition', 'CREATE', `Coaching Student: ${student_name}`);
         return res.status(201).json({ success: true, data: student });
     }
     catch (error) {
@@ -89,7 +89,7 @@ const updateCoachingStudent = async (req, res, next) => {
                 notes: notes !== undefined ? notes : existing.notes
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Coaching Centre', 'UPDATE', `Coaching Student: ${updated.student_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'CKS Tuition', 'UPDATE', `Coaching Student: ${updated.student_name}`);
         return res.status(200).json({ success: true, data: updated });
     }
     catch (error) {
@@ -107,7 +107,7 @@ const deleteCoachingStudent = async (req, res, next) => {
             where: { student_id: id },
             data: { deleted_at: new Date() }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Coaching Centre', 'DELETE', `Coaching Student: ${student.student_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'CKS Tuition', 'DELETE', `Coaching Student: ${student.student_name}`);
         return res.status(200).json({ success: true, message: 'Coaching student deleted successfully' });
     }
     catch (error) {
@@ -168,7 +168,7 @@ const upsertFeeRecord = async (req, res, next) => {
             });
         }
         const student = await prisma_1.prisma.coachingStudent.findUnique({ where: { student_id } });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Coaching Centre', 'UPDATE', `Fee Paid: ${student?.student_name} for ${month_year}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'CKS Tuition', 'UPDATE', `Fee Paid: ${student?.student_name} for ${month_year}`);
         return res.status(200).json({ success: true, data: record });
     }
     catch (error) {
@@ -277,7 +277,7 @@ const createExam = async (req, res, next) => {
                 created_by: req.user?.userId || 'system'
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Coaching Centre', 'CREATE', `Exam Template: ${exam_name} for ${standard}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'CKS Tuition', 'CREATE', `Exam Template: ${exam_name} for ${standard}`);
         return res.status(201).json({ success: true, data: exam });
     }
     catch (error) {
@@ -383,7 +383,7 @@ const saveBulkExamResults = async (req, res, next) => {
                 });
             }
         }
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Coaching Centre', 'UPDATE', `Exam scores saved for: ${exam.exam_name} (${exam.standard})`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'CKS Tuition', 'UPDATE', `Exam scores saved for: ${exam.exam_name} (${exam.standard})`);
         return res.status(200).json({ success: true, message: 'Exam scores updated successfully.' });
     }
     catch (error) {
@@ -497,7 +497,7 @@ const createCoachingStaff = async (req, res, next) => {
                 created_by: req.user?.userId || 'system'
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Coaching Centre', 'CREATE', `Staff: ${staff_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'CKS Tuition', 'CREATE', `Staff: ${staff_name}`);
         return res.status(201).json({ success: true, data: staff });
     }
     catch (error) {
@@ -526,7 +526,7 @@ const updateCoachingStaff = async (req, res, next) => {
                 notes: notes !== undefined ? notes : existing.notes
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Coaching Centre', 'UPDATE', `Staff: ${updated.staff_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'CKS Tuition', 'UPDATE', `Staff: ${updated.staff_name}`);
         return res.status(200).json({ success: true, data: updated });
     }
     catch (error) {
@@ -544,7 +544,7 @@ const deleteCoachingStaff = async (req, res, next) => {
             where: { staff_id: id },
             data: { deleted_at: new Date() }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Coaching Centre', 'DELETE', `Staff: ${staff.staff_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'CKS Tuition', 'DELETE', `Staff: ${staff.staff_name}`);
         return res.status(200).json({ success: true, message: 'Staff deleted successfully' });
     }
     catch (error) {
@@ -583,7 +583,7 @@ const createCoachingBatch = async (req, res, next) => {
                 created_by: req.user?.userId || 'system'
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Coaching Centre', 'CREATE', `Coaching Batch: ${batch_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'CKS Tuition', 'CREATE', `Coaching Batch: ${batch_name}`);
         return res.status(201).json({ success: true, data: batch });
     }
     catch (error) {
@@ -612,7 +612,7 @@ const updateCoachingBatch = async (req, res, next) => {
                 status: status || existing.status
             }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Coaching Centre', 'UPDATE', `Coaching Batch: ${updated.batch_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'CKS Tuition', 'UPDATE', `Coaching Batch: ${updated.batch_name}`);
         return res.status(200).json({ success: true, data: updated });
     }
     catch (error) {
@@ -630,7 +630,7 @@ const deleteCoachingBatch = async (req, res, next) => {
             where: { batch_id: id },
             data: { deleted_at: new Date() }
         });
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Coaching Centre', 'DELETE', `Coaching Batch: ${batch.batch_name}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'CKS Tuition', 'DELETE', `Coaching Batch: ${batch.batch_name}`);
         return res.status(200).json({ success: true, message: 'Batch deleted successfully' });
     }
     catch (error) {
@@ -756,7 +756,7 @@ const autoGenerateMonthlyFees = async (req, res, next) => {
                 generatedCount++;
             }
         }
-        await (0, activityLogger_1.logActivity)('system_auto', 'Rturox Coaching Centre', 'CREATE', `Auto-generated ${generatedCount} fee records for ${currentMonthYear}`);
+        await (0, activityLogger_1.logActivity)('system_auto', 'CKS Tuition', 'CREATE', `Auto-generated ${generatedCount} fee records for ${currentMonthYear}`);
         return res.status(200).json({ success: true, message: `Successfully generated ${generatedCount} pending fee records for ${currentMonthYear}` });
     }
     catch (error) {
@@ -825,7 +825,7 @@ const markCoachingAttendance = async (req, res, next) => {
                 });
             }
         }
-        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'Rturox Coaching Centre', 'UPDATE', `Marked attendance for ${date}`);
+        await (0, activityLogger_1.logActivity)(req.user?.userId || 'system', 'CKS Tuition', 'UPDATE', `Marked attendance for ${date}`);
         return res.status(200).json({ success: true, message: 'Attendance marked successfully' });
     }
     catch (error) {

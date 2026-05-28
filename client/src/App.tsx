@@ -94,7 +94,7 @@ const App: React.FC = () => {
           path="/dashboard/admin"
           element={
             <ProtectedRoute allowedSlugs={['admin']}>
-              <DashboardLayout title="Master Admin Command Center">
+              <DashboardLayout title="BusinessTracker Admin">
                 <AdminDashboard />
               </DashboardLayout>
             </ProtectedRoute>
@@ -116,7 +116,7 @@ const App: React.FC = () => {
           path="/dashboard/realestate"
           element={
             <ProtectedRoute allowedSlugs={['realestate']}>
-              <DashboardLayout title="🏠 DreamKey Properties Dashboard">
+              <DashboardLayout title="🏠 AadanaTharakar Dashboard">
                 <ReDashboard />
               </DashboardLayout>
             </ProtectedRoute>
@@ -127,7 +127,7 @@ const App: React.FC = () => {
           path="/dashboard/training"
           element={
             <ProtectedRoute allowedSlugs={['training']}>
-              <DashboardLayout title="🎓 Rturox Tech Training Portal">
+              <DashboardLayout title="🎓 RturoxAcademy Portal">
                 <TrainingDashboard />
               </DashboardLayout>
             </ProtectedRoute>
@@ -138,7 +138,7 @@ const App: React.FC = () => {
           path="/dashboard/coaching"
           element={
             <ProtectedRoute allowedSlugs={['coaching']}>
-              <DashboardLayout title="🌟 Rturox Coaching Centre Portal">
+              <DashboardLayout title="🌟 CKS Tuition Portal">
                 <CoachingDashboard />
               </DashboardLayout>
             </ProtectedRoute>

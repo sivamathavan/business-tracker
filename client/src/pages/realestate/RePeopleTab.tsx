@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// DreamKey Properties — People & Network
+// AadanaTharakar — People & Network
 // ═══════════════════════════════════════
 import React, { useState, useMemo, useCallback } from 'react';
 import { Plus, Edit3, Trash2, Pin, Phone, MessageCircle, ChevronDown, Download } from 'lucide-react';
@@ -85,13 +85,13 @@ export const RePeopleTab: React.FC<Props> = ({ people, properties = [], onSave, 
 
   const re_exportCSV = () => {
     const data = filtered.map(p => ({ Name: p.name, Type: p.person_type, Mobile: p.mobile, District: p.district, 'Commission Giver': p.commission_giver ? 'Yes' : 'No', 'Rate %': p.commission_rate, 'Total Commission': p.total_commission, Status: p.status }));
-    exportToCSV(data, 'dreamkey_people');
+    exportToCSV(data, 'aadanatharakar_people');
   };
 
   const re_exportPDF = () => {
     const headers = ['Name', 'Type', 'Mobile', 'District', 'Comm Giver', 'Rate %', 'Total Comm', 'Status'];
     const rows = filtered.map(p => [p.name, p.person_type, p.mobile, p.district, p.commission_giver ? 'Yes' : 'No', String(p.commission_rate), formatINR(p.total_commission), p.status]);
-    exportToPDF('DreamKey — People & Network', headers, rows, 'dreamkey_people', [255, 107, 107]);
+    exportToPDF('AadanaTharakar — People & Network', headers, rows, 'aadanatharakar_people', [255, 107, 107]);
   };
 
   const updateForm = (partial: Partial<RePerson>) => setForm(f => ({ ...f, ...partial }));

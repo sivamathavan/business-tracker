@@ -381,9 +381,9 @@ const getConsolidatedRevenueTrend = async (req, res, next) => {
             return {
                 name: m,
                 'Rturox Technology': techVal,
-                'DreamKey Properties': reVal,
-                'Rturox Tech Training': trainingVal,
-                'Rturox Coaching Centre': coachingVal,
+                'AadanaTharakar': reVal,
+                'RturoxAcademy': trainingVal,
+                'CKS Tuition': coachingVal,
                 total: techVal + reVal + trainingVal + coachingVal
             };
         });
@@ -466,7 +466,7 @@ const globalSearch = async (req, res, next) => {
                 id: p.id,
                 name: p.name,
                 mobile: p.mobile,
-                business: 'DreamKey Real Estate',
+                business: 'AadanaTharakar',
                 context: `${p.person_type} - ${p.district} (${p.status})`,
                 timestamp: p.created_at
             })),

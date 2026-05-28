@@ -53,21 +53,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       color: 'text-brand-tech group-hover:text-brand-tech/80',
     },
     {
-      name: 'DreamKey RE',
+      name: 'AadanaTharakar',
       path: '/dashboard/realestate',
       icon: Home,
       roles: ['ADMIN', 'dreamkey'],
       color: 'text-brand-re group-hover:text-brand-re/80',
     },
     {
-      name: 'Tech Training',
+      name: 'RturoxAcademy',
       path: '/dashboard/training',
       icon: GraduationCap,
       roles: ['ADMIN', 'rturox_training'],
       color: 'text-brand-training group-hover:text-brand-training/80',
     },
     {
-      name: 'Coaching Centre',
+      name: 'CKS Tuition',
       path: '/dashboard/coaching',
       icon: Sparkles,
       roles: ['ADMIN', 'rturox_coaching'],
@@ -100,7 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
           </div>
           {isOpen && (
             <span className="font-heading text-sm font-black tracking-widest text-slate-100 uppercase whitespace-nowrap bg-clip-text text-transparent bg-gradient-to-r from-slate-100 to-slate-300">
-              Rturox CC
+              BusinessTracker
             </span>
           )}
         </NavLink>
