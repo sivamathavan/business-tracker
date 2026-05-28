@@ -91,16 +91,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       className="h-full w-64 md:w-full flex flex-col bg-brand-card border-r border-brand-border/60"
     >
       {/* Brand Header */}
-      <div className={`h-16 flex items-center px-4 border-b border-brand-border/40 relative ${
+      <div className={`h-16 flex items-center px-3 border-b border-brand-border/40 relative ${
         isOpen ? 'justify-start' : 'justify-center'
       }`}>
-        <NavLink to="/" onClick={handleLinkClick} className="flex items-center gap-2.5 overflow-hidden">
-          <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-gradient-to-tr from-brand-tech to-brand-re shadow-[0_0_15px_rgba(108,99,255,0.2)]">
-            <span className="text-lg font-bold text-white">⚡</span>
-          </div>
+        <NavLink to="/" onClick={handleLinkClick} className="flex items-center gap-2.5 overflow-hidden min-w-0">
+          {/* Logo image — always visible */}
+          <img
+            src="/logo.png"
+            alt="BusinessTracker Logo"
+            className="flex-shrink-0 w-9 h-9 object-contain rounded-lg"
+          />
           {isOpen && (
-            <span className="font-heading text-sm font-black tracking-widest text-slate-100 uppercase whitespace-nowrap bg-clip-text text-transparent bg-gradient-to-r from-slate-100 to-slate-300">
-              BusinessTracker
+            <span className="font-heading text-[11px] font-black tracking-widest text-slate-100 uppercase whitespace-nowrap leading-tight">
+              Business<br />Tracker
             </span>
           )}
         </NavLink>
