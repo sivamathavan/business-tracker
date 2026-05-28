@@ -42,10 +42,8 @@ export const Login: React.FC = () => {
     setIsAdmin(checked);
     setValue('isAdmin', checked);
     if (checked) {
-      setValue('userId', 'admin');
       setValue('businessSlug', 'admin');
     } else {
-      setValue('userId', '');
       setValue('businessSlug', 'tech');
     }
   };
@@ -159,10 +157,9 @@ export const Login: React.FC = () => {
               <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="text"
-                disabled={isAdmin} // Admin userId is locked to 'admin'
                 placeholder="Enter User ID"
                 {...register('userId', { required: 'User ID is required' })}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-brand-border/60 hover:border-slate-800 focus:border-brand-tech/80 rounded-xl text-xs text-slate-200 focus:outline-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-brand-border/60 hover:border-slate-800 focus:border-brand-tech/80 rounded-xl text-xs text-slate-200 focus:outline-none transition-all duration-200"
               />
             </div>
             {errors.userId && (
