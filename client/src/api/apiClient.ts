@@ -3,9 +3,28 @@ import { useAuthStore } from '../store/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api/v1';
 
+// ─── Simple In-Memory GET Cache (30s TTL) ───────────────────────────────────
+// Prevents redundant API calls when switching tabs or re-rendering components
+const cache = new Map<string, { data: any; expiry: number }>();
+const CACHE_TTL = 30_000; // 30 seconds
+
+export const clearApiCache = () => cache.clear();
+
+const getCached = (key: string) => {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiry) { cache.delete(key); return null; }
+  return entry.data;
+};
+
+const setCache = (key: string, data: any) =>
+  cache.set(key, { data, expiry: Date.now() + CACHE_TTL });
+// ────────────────────────────────────────────────────────────────────────────
+
 const apiClient = axios.create({
   baseURL: API_URL,
   withCredentials: true,
+  timeout: 15_000, // 15s timeout — prevents hung requests on cold starts
   headers: {
     'Content-Type': 'application/json',
   },
@@ -20,9 +39,7 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Response Interceptor: Handle 401 Unauthorized (Auto Refresh JWT)
@@ -41,7 +58,14 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Cache successful GET responses for 30s
+    if (response.config.method === 'get' && response.config.url) {
+      const cacheKey = `${response.config.url}${JSON.stringify(response.config.params || {})}`;
+      setCache(cacheKey, response.data);
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
     
@@ -98,3 +122,13 @@ apiClient.interceptors.response.use(
 );
 
 export default apiClient;
+
+// ─── Cached GET Helper ───────────────────────────────────────────────────────
+// Usage: const data = await cachedGet('/admin/overview');
+// Serves from 30s in-memory cache on repeat calls, network on first/expired.
+export const cachedGet = async (url: string, params?: object) => {
+  const cacheKey = `${url}${JSON.stringify(params || {})}`;
+  const hit = getCached(cacheKey);
+  if (hit) return { data: hit };
+  return apiClient.get(url, { params });
+};

@@ -44,6 +44,10 @@ app.use((req, _res, next) => {
 app.get('/health', (_req, res) => {
     res.status(200).json({ status: 'OK', service: 'BusinessTracker API' });
 });
+// API-level health check (used by client keep-alive ping on startup)
+app.get('/api/v1/health', (_req, res) => {
+    res.status(200).json({ status: 'OK', service: 'BusinessTracker API', ts: Date.now() });
+});
 // Mounting Sub-routes
 app.use('/api/v1/auth', auth_routes_1.default);
 app.use('/api/v1/tech', tech_routes_1.default);

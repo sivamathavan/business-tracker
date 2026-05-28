@@ -1,15 +1,23 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import Login from './pages/auth/Login';
 
-// Import Dashboards (Placeholders created in pages/ folders)
-import AdminDashboard from './pages/admin/AdminDashboard';
-import TechDashboard from './pages/tech/TechDashboard';
-import ReDashboard from './pages/realestate/ReDashboard';
-import TrainingDashboard from './pages/training/TrainingDashboard';
-import CoachingDashboard from './pages/coaching/CoachingDashboard';
+// Lazy-load heavy dashboard pages — each loads only when navigated to
+const AdminDashboard   = lazy(() => import('./pages/admin/AdminDashboard'));
+const TechDashboard    = lazy(() => import('./pages/tech/TechDashboard'));
+const ReDashboard      = lazy(() => import('./pages/realestate/ReDashboard'));
+const TrainingDashboard = lazy(() => import('./pages/training/TrainingDashboard'));
+const CoachingDashboard = lazy(() => import('./pages/coaching/CoachingDashboard'));
+
+// Compact page-level loading spinner
+const PageLoader: React.FC = () => (
+  <div className="flex flex-col items-center justify-center h-96 gap-3">
+    <div className="w-8 h-8 border-[3px] border-indigo-500 border-t-transparent rounded-full animate-spin" />
+    <p className="text-[11px] text-slate-500 font-bold tracking-widest uppercase">Loading...</p>
+  </div>
+);
 
 // Custom Wrapper layout for dashboards to share the TopBar & Sidebar shell
 const DashboardLayout: React.FC<{ children: React.ReactNode; title: string }> = ({ children, title }) => {
@@ -78,85 +86,91 @@ import { TopBar as TopBarShell } from './components/layout/TopBar';
 const App: React.FC = () => {
   const { checkSession, isAuthenticated, user } = useAuthStore();
 
-  // Validate session token on bootstrap
+  // Validate session token on bootstrap + warm up Render server to avoid cold-start delay
   useEffect(() => {
     checkSession();
+    // Ping the server immediately on load to wake Render from sleep
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5001/api/v1';
+    fetch(`${apiBase}/health`, { method: 'GET', credentials: 'include' }).catch(() => {});
   }, [checkSession]);
 
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Auth routes */}
-        <Route path="/login" element={<Login />} />
+      {/* Suspense boundary: all lazy dashboard chunks show PageLoader while loading */}
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Auth routes */}
+          <Route path="/login" element={<Login />} />
 
-        {/* Dashboard routes nested inside Layout shells */}
-        <Route
-          path="/dashboard/admin"
-          element={
-            <ProtectedRoute allowedSlugs={['admin']}>
-              <DashboardLayout title="BusinessTracker Admin">
-                <AdminDashboard />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
+          {/* Dashboard routes — lazy loaded, each is a separate JS chunk */}
+          <Route
+            path="/dashboard/admin"
+            element={
+              <ProtectedRoute allowedSlugs={['admin']}>
+                <DashboardLayout title="BusinessTracker Admin">
+                  <AdminDashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/dashboard/tech"
-          element={
-            <ProtectedRoute allowedSlugs={['tech']}>
-              <DashboardLayout title="💻 Rturox Technology Dashboard">
-                <TechDashboard />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/dashboard/tech"
+            element={
+              <ProtectedRoute allowedSlugs={['tech']}>
+                <DashboardLayout title="💻 Rturox Technology Dashboard">
+                  <TechDashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/dashboard/realestate"
-          element={
-            <ProtectedRoute allowedSlugs={['realestate']}>
-              <DashboardLayout title="🏠 AadanaTharakar Dashboard">
-                <ReDashboard />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/dashboard/realestate"
+            element={
+              <ProtectedRoute allowedSlugs={['realestate']}>
+                <DashboardLayout title="🏠 AadanaTharakar Dashboard">
+                  <ReDashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/dashboard/training"
-          element={
-            <ProtectedRoute allowedSlugs={['training']}>
-              <DashboardLayout title="🎓 RturoxAcademy Portal">
-                <TrainingDashboard />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/dashboard/training"
+            element={
+              <ProtectedRoute allowedSlugs={['training']}>
+                <DashboardLayout title="🎓 RturoxAcademy Portal">
+                  <TrainingDashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/dashboard/coaching"
-          element={
-            <ProtectedRoute allowedSlugs={['coaching']}>
-              <DashboardLayout title="🌟 CKS Tuition Portal">
-                <CoachingDashboard />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/dashboard/coaching"
+            element={
+              <ProtectedRoute allowedSlugs={['coaching']}>
+                <DashboardLayout title="🌟 CKS Tuition Portal">
+                  <CoachingDashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Catch-all redirects */}
-        <Route
-          path="*"
-          element={
-            isAuthenticated && user ? (
-              <Navigate to={`/dashboard/${user.businessSlug}`} replace />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-      </Routes>
+          {/* Catch-all redirects */}
+          <Route
+            path="*"
+            element={
+              isAuthenticated && user ? (
+                <Navigate to={`/dashboard/${user.businessSlug}`} replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 };
