@@ -1,0 +1,381 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans bg-[#0a0a0f] text-slate-100 min-h-screen selection:bg-brand-tech/30 selection:text-white;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading tracking-tight;
+  }
+
+  /* Custom glowing scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-brand-dark;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-brand-border/80 rounded-full hover:bg-slate-700/80 transition-colors;
+  }
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(22, 22, 31, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(42, 42, 58, 0.4);
+}
+
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Pinned records pulsing glow */
+.pulse-glow-purple {
+  box-shadow: 0 0 15px rgba(108, 99, 255, 0.15);
+}
+
+.pulse-glow-coral {
+  box-shadow: 0 0 15px rgba(255, 107, 107, 0.15);
+}
+
+.pulse-glow-emerald {
+  box-shadow: 0 0 15px rgba(67, 233, 123, 0.15);
+}
+
+.pulse-glow-gold {
+  box-shadow: 0 0 15px rgba(247, 183, 49, 0.15);
+}
+
+/* --- PRINT SYSTEM SPECIFIC OVERRIDES --- */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide navigation, sidebars, interactive controls, filters, export buttons */
+  .no-print,
+  sidebar,
+  nav,
+  aside,
+  header,
+  .print-hidden,
+  button,
+  .button,
+  .actions-column,
+  .filter-bar,
+  input,
+  select,
+  textarea {
+    display: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Expand print panels to occupy 100% of printable space */
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+
+  .print-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    border: none !important;
+    background: white !important;
+    box-shadow: none !important;
+    color: black !important;
+  }
+
+  /* Keep table borders clean and readable */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    color: black !important;
+    background: white !important;
+  }
+
+  th, td {
+    border: 1px solid #ddd !important;
+    padding: 8px !important;
+    text-align: left !important;
+    color: black !important;
+  }
+
+  th {
+    background-color: #f2f2f2 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* --- PREMIUM LIGHT THEME AUTOMATIC STYLES OVERRIDES --- */
+html:not(.dark) {
+  --bg-color: #f4f5f8;
+  --card-color: #ffffff;
+  --border-color: #e4e7eb;
+}
+
+html:not(.dark) body {
+  background-color: #f4f5f8 !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) .bg-brand-card,
+html:not(.dark) .bg-brand-card\/75,
+html:not(.dark) .bg-brand-card\/80,
+html:not(.dark) .bg-brand-card\/90,
+html:not(.dark) .bg-\[\#161623\]\/80,
+html:not(.dark) .bg-\[\#12121a\]\/95 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02) !important;
+}
+
+html:not(.dark) .text-white,
+html:not(.dark) .text-slate-100,
+html:not(.dark) .text-slate-200,
+html:not(.dark) h1.text-white,
+html:not(.dark) h2.text-white,
+html:not(.dark) h3.text-white,
+html:not(.dark) h4.text-white,
+html:not(.dark) p.text-white,
+html:not(.dark) p.text-slate-100,
+html:not(.dark) span.text-white:not(.text-slate-100),
+html:not(.dark) td.text-white,
+html:not(.dark) th.text-white,
+html:not(.dark) div.text-white,
+html:not(.dark) .text-slate-100:not(button):not(a),
+html:not(.dark) .text-slate-200:not(button):not(a) {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .text-slate-300,
+html:not(.dark) .text-slate-400 {
+  color: #334155 !important;
+}
+
+html:not(.dark) .text-slate-500 {
+  color: #64748b !important;
+}
+
+html:not(.dark) .border-brand-border,
+html:not(.dark) .border-brand-border\/20,
+html:not(.dark) .border-brand-border\/30,
+html:not(.dark) .border-brand-border\/40,
+html:not(.dark) .border-brand-border\/60,
+html:not(.dark) .border-brand-border\/80 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .bg-brand-dark\/40,
+html:not(.dark) .bg-brand-dark\/20,
+html:not(.dark) .bg-slate-900\/40,
+html:not(.dark) .bg-slate-900 {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) input,
+html:not(.dark) select,
+html:not(.dark) textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) input::placeholder {
+  color: #94a3b8 !important;
+}
+
+html:not(.dark) .divide-brand-border\/20 > * {
+  border-color: #e2e8f0 !important;
+}
+
+/* --- LIGHT/DAY MODE SPECIFIC OVERRIDES --- */
+
+/* Sidebar Navigation overrides */
+html:not(.dark) aside {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) aside nav a.bg-slate-800\/60 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+}
+
+html:not(.dark) aside nav a:not(.bg-slate-800\/60):hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) aside span.font-heading {
+  background-clip: border-box !important;
+  -webkit-background-clip: border-box !important;
+  background-image: none !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) aside button.absolute {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05) !important;
+}
+
+html:not(.dark) aside button.absolute:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) aside .bg-brand-dark\/40 {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) aside .bg-slate-800 {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+html:not(.dark) aside button.text-rose-400 {
+  color: #e11d48 !important;
+}
+
+html:not(.dark) aside button.text-rose-400:hover {
+  background-color: #ffe4e6 !important;
+  border-color: #fecdd3 !important;
+  color: #9f1239 !important;
+}
+
+html:not(.dark) aside button.bg-slate-800\/40 {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+html:not(.dark) aside button.bg-slate-800\/40:hover {
+  background-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+/* Revenue Hero Card overrides */
+html:not(.dark) .revenue-hero-card {
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02) !important;
+}
+
+html:not(.dark) .revenue-hero-card.from-brand-tech\/15 {
+  background-image: linear-gradient(135deg, rgba(108, 99, 255, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
+}
+
+html:not(.dark) .revenue-hero-card.from-brand-re\/15 {
+  background-image: linear-gradient(135deg, rgba(255, 107, 107, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
+}
+
+html:not(.dark) .revenue-hero-card.from-brand-training\/15 {
+  background-image: linear-gradient(135deg, rgba(67, 233, 123, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
+}
+
+html:not(.dark) .revenue-hero-card.from-brand-coaching\/15 {
+  background-image: linear-gradient(135deg, rgba(247, 183, 49, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
+}
+
+html:not(.dark) .revenue-hero-card.from-indigo-600\/10 {
+  background-image: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(244, 63, 94, 0.04) 50%, rgba(255, 255, 255, 0.95) 100%) !important;
+}
+
+/* Contrast adjustment for values inside card */
+html:not(.dark) .revenue-hero-card .text-emerald-400 {
+  color: #059669 !important;
+}
+
+html:not(.dark) .revenue-hero-card .text-amber-400 {
+  color: #d97706 !important;
+}
+
+/* Badge Contrast adjustments */
+html:not(.dark) .revenue-hero-card .bg-emerald-950\/40 {
+  background-color: #d1fae5 !important;
+  color: #065f46 !important;
+  border-color: #a7f3d0 !important;
+}
+
+html:not(.dark) .revenue-hero-card .bg-rose-950\/40 {
+  background-color: #ffe4e6 !important;
+  color: #9f1239 !important;
+  border-color: #fecdd3 !important;
+}
+
+/* TopBar Header utilities */
+html:not(.dark) header {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03) !important;
+}
+
+html:not(.dark) header button.bg-slate-800\/30 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+html:not(.dark) header button.bg-slate-800\/30:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) header button.bg-slate-800\/40 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+html:not(.dark) header button.bg-slate-800\/40:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) header .absolute.right-0 {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+html:not(.dark) header .absolute.right-0 span {
+  color: #0f172a !important;
+}
+
+html:not(.dark) header .absolute.right-0 .text-slate-400 {
+  color: #475569 !important;
+}
+
+html:not(.dark) header .absolute.right-0 .divide-brand-border\/20 > * {
+  border-color: #f1f5f9 !important;
+}
+
+html:not(.dark) header .absolute.right-0 .hover\:bg-slate-800\/30:hover {
+  background-color: #f8fafc !important;
+}

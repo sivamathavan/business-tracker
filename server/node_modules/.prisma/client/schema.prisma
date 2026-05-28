@@ -1,0 +1,495 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// --------------------------------------------------
+// CORE AUTH & UTILITY MODELS
+// --------------------------------------------------
+
+model Business {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  users     User[]
+}
+
+model User {
+  id           String    @id @default(uuid())
+  userId       String    @unique
+  passcodeHash String
+  role         String // ADMIN or USER
+  businessId   String?
+  business     Business? @relation(fields: [businessId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  userId     String
+  business   String
+  actionType String // CREATE, UPDATE, DELETE, LOGIN
+  recordName String
+  timestamp  DateTime @default(now())
+}
+
+model PinnedRecord {
+  id         String   @id @default(uuid())
+  userId     String
+  businessId String
+  recordType String
+  recordId   String
+  createdAt  DateTime @default(now())
+}
+
+// --------------------------------------------------
+// BUSINESS 1 - RTUROX TECHNOLOGY MODELS
+// --------------------------------------------------
+
+model TechProject {
+  project_id           String                 @id @default(uuid())
+  project_name         String
+  client_name          String
+  client_mobile        String?
+  project_type         String // Website, Web App, Mobile App, Automation, Marketing
+  status               String // Lead, In Progress, Review, Completed, On Hold
+  priority             String // High, Medium, Low
+  start_date           DateTime?
+  deadline_date        DateTime?
+  delivery_date        DateTime?
+  total_amount         Decimal
+  amount_received      Decimal                @default(0)
+  notes                String?
+  is_pinned            Boolean                @default(false)
+  created_by           String
+  created_at           DateTime               @default(now())
+  updated_at           DateTime               @updatedAt
+  deleted_at           DateTime?
+  TechProjectMilestone TechProjectMilestone[]
+}
+
+model TechInvoice {
+  invoice_id     String    @id @default(uuid())
+  invoice_number String
+  client_name    String
+  project_name   String
+  amount         Decimal
+  date_sent      DateTime?
+  due_date       DateTime?
+  status         String // Pending, Paid, Overdue
+  notes          String?
+  created_by     String
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  deleted_at     DateTime?
+}
+
+model TechProposal {
+  proposal_id    String    @id @default(uuid())
+  lead_name      String
+  lead_mobile    String?
+  service_type   String // Website, Web App, Mobile App, Automation, Marketing
+  proposal_value Decimal
+  date_sent      DateTime?
+  followup_date  DateTime?
+  status         String // Sent, Followed Up, Won, Lost
+  notes          String?
+  created_by     String
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  deleted_at     DateTime?
+}
+
+// --------------------------------------------------
+// BUSINESS 2 - DREAMKEY PROPERTIES MODELS
+// --------------------------------------------------
+
+model RePerson {
+  id               String    @id @default(uuid())
+  name             String
+  person_type      String // Broker, Land Owner, Builder, Interior Designer, etc.
+  mobile           String
+  email            String?
+  district         String
+  area             String
+  company          String?
+  rera_id          String?
+  commission_giver Boolean   @default(false)
+  commission_rate  Decimal   @default(0)
+  total_commission Decimal   @default(0)
+  status           String    @default("Active")
+  pinned           Boolean   @default(false)
+  notes            String?
+  specialization   String?
+  created_by       String
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+  deleted_at       DateTime?
+}
+
+model ReDeal {
+  id                     String    @id @default(uuid())
+  title                  String
+  deal_type              String // Both Side Broker, Buyer Side Only, etc.
+  status                 String
+  property_type          String
+  district               String
+  area                   String
+  property_value         Decimal
+  seller_name            String?
+  seller_mobile          String?
+  buyer_name             String?
+  buyer_mobile           String?
+  seller_broker_id       String?
+  buyer_broker_id        String?
+  commission_rate_seller Decimal   @default(0)
+  commission_rate_buyer  Decimal   @default(0)
+  commission_amount      Decimal   @default(0)
+  commission_received    Decimal   @default(0)
+  token_amount           Decimal   @default(0)
+  follow_up_date         DateTime?
+  notes                  String?
+  documents              String? // JSON array string
+  created_by             String
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+  deleted_at             DateTime?
+}
+
+model ReProperty {
+  id               String    @id @default(uuid())
+  title            String
+  property_type    String
+  status           String
+  district         String
+  area             String
+  extent           String?
+  road_facing      String?
+  price            Decimal
+  price_per_unit   String?
+  submitter_type   String?
+  submitter_name   String?
+  submitter_mobile String?
+  owner_name       String?
+  owner_mobile     String?
+  survey_number    String?
+  maps_link        String?
+  doc_checklist    String? // JSON object string
+  photos           String? // JSON array string
+  notes            String?
+  created_by       String
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+  deleted_at       DateTime?
+}
+
+model ReCommissionRecord {
+  id                  String    @id @default(uuid())
+  deal_id             String
+  deal_title          String
+  deal_type           String
+  total_value         Decimal
+  commission_expected Decimal
+  commission_received Decimal
+  payout_amount       Decimal
+  status              String
+  date                DateTime
+  created_by          String
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+  deleted_at          DateTime?
+}
+
+model RePayout {
+  id          String    @id @default(uuid())
+  person_id   String
+  person_name String
+  deal_id     String
+  deal_title  String
+  amount      Decimal
+  paid        Boolean   @default(false)
+  date        DateTime
+  notes       String?
+  created_by  String
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  deleted_at  DateTime?
+}
+
+model RePeoplePayment {
+  id          String    @id @default(uuid())
+  person_id   String
+  person_name String
+  deal_id     String
+  deal_title  String
+  amount      Decimal
+  received    Boolean   @default(false)
+  date        DateTime
+  notes       String?
+  created_by  String
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  deleted_at  DateTime?
+}
+
+model ReActivity {
+  id         String   @id @default(uuid())
+  action     String
+  entity     String
+  entity_id  String
+  timestamp  DateTime @default(now())
+  created_by String
+  created_at DateTime @default(now())
+}
+
+// --------------------------------------------------
+// BUSINESS 3 - RTUROX TECH TRAINING MODELS
+// --------------------------------------------------
+
+model TrainingCourse {
+  course_id              String    @id @default(uuid())
+  course_name            String
+  platform               String // College, Online, YouTube, Udemy, Coursera, Rturox, Other
+  category               String // Web Dev, Mobile, AI/ML, Design, Marketing, DevOps, Other
+  status                 String // Not Started, In Progress, Completed
+  total_modules          Int
+  completed_modules      Int
+  start_date             DateTime?
+  target_completion_date DateTime?
+  certificate_status     String // Not Applicable, Pending, Uploaded
+  skill_tags             String?
+  resource_url           String?
+  notes                  String?
+  is_pinned              Boolean   @default(false)
+  created_by             String
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+  deleted_at             DateTime?
+}
+
+model TrainingStudent {
+  student_id         String               @id @default(uuid())
+  student_name       String
+  mobile             String?
+  email              String?
+  course_enrolled    String?
+  batch_name         String?
+  enrollment_date    DateTime?
+  total_fee          Decimal
+  status             String // Active, Completed, Dropped
+  notes              String?
+  created_by         String
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+  deleted_at         DateTime?
+  TrainingAttendance TrainingAttendance[]
+}
+
+model TrainingFeeInstallment {
+  id             String    @id @default(uuid())
+  student_id     String
+  amount         Decimal
+  date           DateTime
+  status         String // "Paid", "Pending", "Overdue"
+  payment_mode   String? // "Cash", "UPI", "Bank"
+  receipt_number String?
+  notes          String?
+  created_by     String
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  deleted_at     DateTime?
+}
+
+model TrainingBatch {
+  batch_id      String    @id @default(uuid())
+  batch_name    String
+  course_name   String?
+  start_date    DateTime?
+  end_date      DateTime?
+  schedule_days String?
+  time_slot     String?
+  capacity      Int
+  teacher_name  String?
+  status        String // Upcoming, Active, Completed
+  created_by    String
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  deleted_at    DateTime?
+}
+
+model TrainingStudyLog {
+  log_id         String    @id @default(uuid())
+  log_date       DateTime?
+  course_name    String?
+  hours_studied  Decimal
+  topics_covered String?
+  created_by     String
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  deleted_at     DateTime?
+}
+
+// --------------------------------------------------
+// BUSINESS 4 - RTUROX COACHING CENTRE MODELS
+// --------------------------------------------------
+
+model CoachingStudent {
+  student_id         String               @id @default(uuid())
+  student_name       String
+  father_name        String?
+  mother_name        String?
+  parent_mobile      String
+  student_mobile     String?
+  standard           String // 1st through 12th
+  section            String?
+  school_name        String?
+  department         String? // General, Science, Commerce, Arts
+  subjects_enrolled  String?
+  enrollment_date    DateTime?
+  monthly_fee        Decimal
+  status             String // Active, Inactive, Completed
+  notes              String?
+  created_by         String
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+  deleted_at         DateTime?
+  CoachingAttendance CoachingAttendance[]
+}
+
+model CoachingFeeRecord {
+  fee_id         String    @id @default(uuid())
+  student_id     String
+  month_year     String // e.g. "June 2026"
+  fee_amount     Decimal
+  paid_date      DateTime?
+  payment_mode   String? // Cash, UPI, Bank Transfer, Cheque
+  receipt_number String?
+  status         String // Paid, Pending, Overdue
+  notes          String?
+  created_by     String
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  deleted_at     DateTime?
+}
+
+model CoachingBatch {
+  batch_id      String    @id @default(uuid())
+  batch_name    String
+  standard      String
+  subject       String?
+  teacher_name  String?
+  schedule_days String?
+  time_slot     String?
+  room_number   String?
+  capacity      Int
+  status        String // Active, Holiday, Completed
+  created_by    String
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  deleted_at    DateTime?
+}
+
+model CoachingStaff {
+  staff_id               String    @id @default(uuid())
+  staff_name             String
+  mobile                 String
+  email                  String?
+  subject_specialization String?
+  standards_taught       String?
+  joining_date           DateTime?
+  monthly_salary         Decimal
+  status                 String // Active, Inactive
+  notes                  String?
+  created_by             String
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+  deleted_at             DateTime?
+}
+
+model CoachingExam {
+  exam_id     String    @id @default(uuid())
+  exam_name   String
+  standard    String
+  subject     String?
+  exam_date   DateTime?
+  total_marks Int
+  created_by  String
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  deleted_at  DateTime?
+}
+
+model CoachingResult {
+  result_id    String    @id @default(uuid())
+  exam_id      String
+  student_id   String
+  marks_scored Decimal
+  created_by   String
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+  deleted_at   DateTime?
+}
+
+// ==========================================
+// ATTENDANCE REGISTERS
+// ==========================================
+
+model TrainingAttendance {
+  id         String    @id @default(uuid())
+  student_id String
+  date       DateTime  @db.Date
+  status     String // Present, Absent, Late
+  notes      String?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  student TrainingStudent @relation(fields: [student_id], references: [student_id])
+
+  @@unique([student_id, date])
+}
+
+model CoachingAttendance {
+  id         String    @id @default(uuid())
+  student_id String
+  date       DateTime  @db.Date
+  status     String // Present, Absent, Late
+  notes      String?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  student CoachingStudent @relation(fields: [student_id], references: [student_id])
+
+  @@unique([student_id, date])
+}
+
+// ==========================================
+// TECH SERVICES MILESTONES
+// ==========================================
+
+model TechProjectMilestone {
+  id              String    @id @default(uuid())
+  project_id      String
+  title           String
+  description     String?
+  target_date     DateTime  @db.Date
+  completion_date DateTime? @db.Date
+  status          String    @default("Pending") // Pending, In Progress, Completed
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  deleted_at      DateTime?
+
+  project TechProject @relation(fields: [project_id], references: [project_id])
+}
