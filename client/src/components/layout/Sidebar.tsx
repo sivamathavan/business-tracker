@@ -91,15 +91,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       className="h-full w-64 md:w-full flex flex-col bg-brand-card border-r border-brand-border/60"
     >
       {/* Brand Header */}
-      <div className={`h-16 flex items-center px-3 border-b border-brand-border/40 relative ${
+      <div className={`h-20 flex items-center px-3 border-b border-brand-border/40 relative ${
         isOpen ? 'justify-start' : 'justify-center'
       }`}>
-        <NavLink to="/" onClick={handleLinkClick} className="flex items-center gap-2.5 overflow-hidden min-w-0">
+        <NavLink to="/" onClick={handleLinkClick} className="flex items-center gap-3 overflow-hidden min-w-0">
           {/* Logo image — always visible */}
           <img
             src="/logo.png"
             alt="BusinessTracker Logo"
-            className="flex-shrink-0 w-9 h-9 object-contain rounded-lg"
+            className="flex-shrink-0 w-14 h-14 object-contain rounded-xl drop-shadow-[0_0_12px_rgba(255,180,0,0.4)]"
           />
           {isOpen && (
             <span className="font-heading text-[11px] font-black tracking-widest text-slate-100 uppercase whitespace-nowrap leading-tight">

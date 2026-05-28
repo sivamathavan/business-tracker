@@ -87,12 +87,14 @@ export const Login: React.FC = () => {
 
       <div className="w-full max-w-md bg-[#161623]/80 border border-brand-border/60 hover:border-slate-800 rounded-3xl p-8 backdrop-blur-md shadow-2xl relative z-10 transition-all duration-300">
         
-        {/* Glowing Bolt Logo Header */}
+        {/* Logo Header */}
         <div className="flex flex-col items-center text-center">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-tech via-[#8c43ff] to-brand-re flex items-center justify-center shadow-[0_0_20px_rgba(108,99,255,0.4)] animate-pulse">
-            <span className="text-2xl font-black text-white">⚡</span>
-          </div>
-          <h2 className="text-2xl font-extrabold text-white mt-4 font-heading tracking-tight">
+          <img
+            src="/logo.png"
+            alt="BusinessTracker"
+            className="w-24 h-24 object-contain drop-shadow-[0_0_24px_rgba(255,180,0,0.5)] animate-pulse"
+          />
+          <h2 className="text-2xl font-extrabold text-white mt-3 font-heading tracking-tight">
             BusinessTracker
           </h2>
           <p className="text-[11px] text-slate-400 font-semibold tracking-widest uppercase mt-1">
