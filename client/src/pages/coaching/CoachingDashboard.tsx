@@ -15,6 +15,7 @@ import { generateFeeReceipt } from '../../utils/pdfGenerator';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { WhatsAppButton } from '../../components/ui/WhatsAppButton';
 import { RevenueHeroCard } from '../../components/ui/RevenueHeroCard';
+import { ExpensesTab } from '../../components/ui/ExpensesTab';
 
 // ==========================================
 // INTERFACES
@@ -82,7 +83,7 @@ interface Exam {
 }
 
 export const CoachingDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'students' | 'fees' | 'batches' | 'staff' | 'exams' | 'analytics' | 'attendance'>('students');
+  const [activeTab, setActiveTab] = useState<'students' | 'fees' | 'batches' | 'staff' | 'exams' | 'analytics' | 'attendance' | 'expenses'>('students');
 
   // Data States
   const [students, setStudents] = useState<Student[]>([]);
@@ -162,6 +163,7 @@ export const CoachingDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    fetchAnalytics();
   }, []);
 
   useEffect(() => {
@@ -500,7 +502,8 @@ export const CoachingDashboard: React.FC = () => {
           { key: 'attendance', label: 'Attendance Register', icon: Calendar },
           { key: 'staff', label: 'Teachers Registry', icon: User },
           { key: 'exams', label: 'Exams & Scorecards', icon: ClipboardList },
-          { key: 'analytics', label: 'Revenue Analytics', icon: BarChart2 }
+          { key: 'analytics', label: 'Revenue Analytics', icon: BarChart2 },
+          { key: 'expenses', label: 'Expense Tracker', icon: Wallet }
         ].map((tab) => {
           const Icon = tab.icon;
           return (
@@ -1580,6 +1583,13 @@ export const CoachingDashboard: React.FC = () => {
 
           </div>
         </div>
+      )}
+
+      {/* =======================================================================
+          TAB 8: EXPENSE TRACKER
+          ======================================================================= */}
+      {activeTab === 'expenses' && (
+        <ExpensesTab businessSlug="coaching" onSave={fetchData} />
       )}
 
       {/* =======================================================================

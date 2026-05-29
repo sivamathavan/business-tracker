@@ -10,6 +10,7 @@ import { ReDealsTab } from './ReDealsTab';
 import { RePropertiesTab } from './RePropertiesTab';
 import { ReCommissionTab } from './ReCommissionTab';
 import { ReAnalyticsTab } from './ReAnalyticsTab';
+import { ExpensesTab } from '../../components/ui/ExpensesTab';
 
 export default function ReDashboard() {
   const [activeTab, setActiveTab] = useState<ReTabKey>('overview');
@@ -103,6 +104,10 @@ export default function ReDashboard() {
           properties={data.properties}
           commissions={data.commissions}
         />
+      )}
+
+      {activeTab === 'expenses' && (
+        <ExpensesTab businessSlug="realestate" onSave={data.fetchData} />
       )}
     </div>
   );

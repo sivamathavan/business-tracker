@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import { 
   Plus, Search, Edit2, Trash2, Pin, Calendar, User, 
   DollarSign, FileText, BarChart2, PieChart, KanbanSquare, 
-  FileSpreadsheet, FileDown, Phone, Briefcase, ListTodo, CalendarDays
+  FileSpreadsheet, FileDown, Phone, Briefcase, ListTodo, CalendarDays, Wallet
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RePie, Pie, Cell } from 'recharts';
 import apiClient from '../../api/apiClient';
@@ -15,6 +15,7 @@ import { StatusBadge } from '../../components/ui/StatusBadge';
 import { WhatsAppButton } from '../../components/ui/WhatsAppButton';
 import { RevenueHeroCard } from '../../components/ui/RevenueHeroCard';
 import { KanbanBoard, KanbanCardData } from '../../components/ui/KanbanBoard';
+import { ExpensesTab } from '../../components/ui/ExpensesTab';
 
 // ==========================================
 // TYPES DEFINITIONS
@@ -63,7 +64,7 @@ interface Proposal {
 }
 
 export const TechDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'projects' | 'milestones' | 'clients' | 'invoices' | 'proposals' | 'analytics'>('projects');
+  const [activeTab, setActiveTab] = useState<'projects' | 'milestones' | 'clients' | 'invoices' | 'proposals' | 'analytics' | 'expenses'>('projects');
   
   // Data States
   const [projects, setProjects] = useState<Project[]>([]);
@@ -436,7 +437,8 @@ export const TechDashboard: React.FC = () => {
           { key: 'clients', label: 'Client Portals', icon: User },
           { key: 'invoices', label: 'Invoices Hub', icon: FileText },
           { key: 'proposals', label: 'Proposals Kanban', icon: KanbanSquare },
-          { key: 'analytics', label: 'Revenue Analytics', icon: BarChart2 }
+          { key: 'analytics', label: 'Revenue Analytics', icon: BarChart2 },
+          { key: 'expenses', label: 'Expense Tracker', icon: Wallet }
         ].map((tab) => {
           const Icon = tab.icon;
           return (
@@ -1145,6 +1147,13 @@ export const TechDashboard: React.FC = () => {
 
           </div>
         </div>
+      )}
+
+      {/* =======================================================================
+          TAB 6: EXPENSE TRACKER
+          ======================================================================= */}
+      {activeTab === 'expenses' && (
+        <ExpensesTab businessSlug="tech" onSave={fetchData} />
       )}
 
       {/* =======================================================================

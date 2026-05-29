@@ -70,7 +70,7 @@ async function main() {
 
   await prisma.user.create({
     data: {
-      userId: 'dreamkey',
+      userId: 'aadanatharakar',
       passcodeHash: bcrypt.hashSync('222222', salt),
       role: 'USER',
       businessId: reBiz.id
@@ -261,24 +261,24 @@ async function main() {
 
   await prisma.rePerson.createMany({
     data: [
-      { name: 'Karthik Selvam', person_type: 'Broker', mobile: '9876543210', email: 'karthik@mail.com', district: 'Madurai', area: 'Thirumangalam', company: 'SK Realty', rera_id: 'TN-RE-0012', commission_giver: true, commission_rate: 1.5, total_commission: 225000, status: 'Active', pinned: true, notes: 'Top performer Q1', specialization: 'Agricultural Land', created_by: 'dreamkey' },
-      { name: 'Priya Devi', person_type: 'Broker', mobile: '9871234567', email: 'priya@mail.com', district: 'Coimbatore', area: 'RS Puram', company: 'Priya Properties', rera_id: 'TN-RE-0034', commission_giver: true, commission_rate: 2.0, total_commission: 180000, status: 'Active', pinned: false, notes: '', specialization: 'Residential Plot', created_by: 'dreamkey' },
-      { name: 'Rajan Murugan', person_type: 'Land Owner', mobile: '9865432100', email: 'rajan@mail.com', district: 'Salem', area: 'Attur', company: '', rera_id: '', commission_giver: false, commission_rate: 0, total_commission: 0, status: 'Active', pinned: false, notes: 'Owns 10 acres at Attur', specialization: '', created_by: 'dreamkey' },
-      { name: 'Vijay Kumar', person_type: 'Builder', mobile: '9843211234', email: 'vijay@build.com', district: 'Tiruchirappalli', area: 'Srirangam', company: 'VK Constructions', rera_id: 'TN-BLD-0088', commission_giver: true, commission_rate: 1.0, total_commission: 95000, status: 'Active', pinned: false, notes: '', specialization: 'Villa', created_by: 'dreamkey' }
+      { name: 'Karthik Selvam', person_type: 'Broker', mobile: '9876543210', email: 'karthik@mail.com', district: 'Madurai', area: 'Thirumangalam', company: 'SK Realty', rera_id: 'TN-RE-0012', commission_giver: true, commission_rate: 1.5, total_commission: 225000, status: 'Active', pinned: true, notes: 'Top performer Q1', specialization: 'Agricultural Land', created_by: 'aadanatharakar' },
+      { name: 'Priya Devi', person_type: 'Broker', mobile: '9871234567', email: 'priya@mail.com', district: 'Coimbatore', area: 'RS Puram', company: 'Priya Properties', rera_id: 'TN-RE-0034', commission_giver: true, commission_rate: 2.0, total_commission: 180000, status: 'Active', pinned: false, notes: '', specialization: 'Residential Plot', created_by: 'aadanatharakar' },
+      { name: 'Rajan Murugan', person_type: 'Land Owner', mobile: '9865432100', email: 'rajan@mail.com', district: 'Salem', area: 'Attur', company: '', rera_id: '', commission_giver: false, commission_rate: 0, total_commission: 0, status: 'Active', pinned: false, notes: 'Owns 10 acres at Attur', specialization: '', created_by: 'aadanatharakar' },
+      { name: 'Vijay Kumar', person_type: 'Builder', mobile: '9843211234', email: 'vijay@build.com', district: 'Tiruchirappalli', area: 'Srirangam', company: 'VK Constructions', rera_id: 'TN-BLD-0088', commission_giver: true, commission_rate: 1.0, total_commission: 95000, status: 'Active', pinned: false, notes: '', specialization: 'Villa', created_by: 'aadanatharakar' }
     ]
   });
 
   await prisma.reProperty.createMany({
     data: [
-      { title: '3 Acres NH Facing Land', property_type: 'Agricultural Land', status: 'Available', district: 'Madurai', area: 'Thirumangalam', extent: '3 Acres', road_facing: '60 ft NH', price: 4500000, price_per_unit: '₹15L/acre', submitter_type: 'Broker', submitter_name: 'Karthik Selvam', submitter_mobile: '9876543210', owner_name: 'Rajan M', owner_mobile: '9865432100', survey_number: '145/2A', maps_link: '', doc_checklist: JSON.stringify({ 'Patta': 'Verified', 'Chitta': 'Verified', 'FMB Sketch': 'Received' }), photos: '[]', notes: 'NH-44 side, good frontage', created_by: 'dreamkey' },
-      { title: '1.5 Acres Attur Land', property_type: 'Agricultural Land', status: 'Under Deal', district: 'Salem', area: 'Attur', extent: '1.5 Acres', road_facing: '30 ft', price: 1800000, price_per_unit: '₹12L/acre', submitter_type: 'Owner Direct', submitter_name: 'Rajan Murugan', submitter_mobile: '9865432100', owner_name: 'Rajan Murugan', owner_mobile: '9865432100', survey_number: '89/1B', maps_link: '', doc_checklist: JSON.stringify({ 'Patta': 'Verified', 'Chitta': 'Received', 'FMB Sketch': 'Pending' }), photos: '[]', notes: '', created_by: 'dreamkey' }
+      { title: '3 Acres NH Facing Land', property_type: 'Agricultural Land', status: 'Available', district: 'Madurai', area: 'Thirumangalam', extent: '3 Acres', road_facing: '60 ft NH', price: 4500000, price_per_unit: '₹15L/acre', submitter_type: 'Broker', submitter_name: 'Karthik Selvam', submitter_mobile: '9876543210', owner_name: 'Rajan M', owner_mobile: '9865432100', survey_number: '145/2A', maps_link: '', doc_checklist: JSON.stringify({ 'Patta': 'Verified', 'Chitta': 'Verified', 'FMB Sketch': 'Received' }), photos: '[]', notes: 'NH-44 side, good frontage', created_by: 'aadanatharakar' },
+      { title: '1.5 Acres Attur Land', property_type: 'Agricultural Land', status: 'Under Deal', district: 'Salem', area: 'Attur', extent: '1.5 Acres', road_facing: '30 ft', price: 1800000, price_per_unit: '₹12L/acre', submitter_type: 'Owner Direct', submitter_name: 'Rajan Murugan', submitter_mobile: '9865432100', owner_name: 'Rajan Murugan', owner_mobile: '9865432100', survey_number: '89/1B', maps_link: '', doc_checklist: JSON.stringify({ 'Patta': 'Verified', 'Chitta': 'Received', 'FMB Sketch': 'Pending' }), photos: '[]', notes: '', created_by: 'aadanatharakar' }
     ]
   });
 
   await prisma.reDeal.createMany({
     data: [
-      { title: 'Thirumangalam 3 Acre Deal', deal_type: 'Both Side Broker', status: 'Negotiation', property_type: 'Agricultural Land', district: 'Madurai', area: 'Thirumangalam', property_value: 4500000, seller_name: 'Rajan M', seller_mobile: '9865432100', buyer_name: 'Ganesh P', buyer_mobile: '9856781234', seller_broker_id: '', buyer_broker_id: '', commission_rate_seller: 1.5, commission_rate_buyer: 1.0, commission_amount: 112500, commission_received: 0, token_amount: 0, follow_up_date: new Date(Date.now() + 2 * 86400000), notes: 'Both sides through us', documents: '[]', created_by: 'dreamkey' },
-      { title: 'RS Puram Commercial Sale', deal_type: 'Buyer Side Only', status: 'Closed', property_type: 'Commercial Plot', district: 'Coimbatore', area: 'RS Puram', property_value: 7200000, seller_name: 'Suresh R', seller_mobile: '9845678901', buyer_name: 'Mohan K', buyer_mobile: '9834561234', seller_broker_id: '', buyer_broker_id: '', commission_rate_seller: 0, commission_rate_buyer: 2.0, commission_amount: 144000, commission_received: 144000, token_amount: 500000, follow_up_date: null, notes: 'Completed successfully', documents: '[]', created_by: 'dreamkey' }
+      { title: 'Thirumangalam 3 Acre Deal', deal_type: 'Both Side Broker', status: 'Negotiation', property_type: 'Agricultural Land', district: 'Madurai', area: 'Thirumangalam', property_value: 4500000, seller_name: 'Rajan M', seller_mobile: '9865432100', buyer_name: 'Ganesh P', buyer_mobile: '9856781234', seller_broker_id: '', buyer_broker_id: '', commission_rate_seller: 1.5, commission_rate_buyer: 1.0, commission_amount: 112500, commission_received: 0, token_amount: 0, follow_up_date: new Date(Date.now() + 2 * 86400000), notes: 'Both sides through us', documents: '[]', created_by: 'aadanatharakar' },
+      { title: 'RS Puram Commercial Sale', deal_type: 'Buyer Side Only', status: 'Closed', property_type: 'Commercial Plot', district: 'Coimbatore', area: 'RS Puram', property_value: 7200000, seller_name: 'Suresh R', seller_mobile: '9845678901', buyer_name: 'Mohan K', buyer_mobile: '9834561234', seller_broker_id: '', buyer_broker_id: '', commission_rate_seller: 0, commission_rate_buyer: 2.0, commission_amount: 144000, commission_received: 144000, token_amount: 500000, follow_up_date: null, notes: 'Completed successfully', documents: '[]', created_by: 'aadanatharakar' }
     ]
   });
 

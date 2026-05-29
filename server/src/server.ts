@@ -13,6 +13,7 @@ import reRouter from './routes/re.routes';
 import trainingRouter from './routes/training.routes';
 import coachingRouter from './routes/coaching.routes';
 import adminRouter from './routes/admin.routes';
+import expenseRouter from './routes/expense.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -60,6 +61,7 @@ app.use('/api/v1/re', reRouter);
 app.use('/api/v1/training', trainingRouter);
 app.use('/api/v1/coaching', coachingRouter);
 app.use('/api/v1/admin', adminRouter);
+app.use('/api/v1/expenses', expenseRouter);
 
 // Fallback Route
 app.use('*', (_req, res) => {

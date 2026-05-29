@@ -493,3 +493,22 @@ model TechProjectMilestone {
 
   project TechProject @relation(fields: [project_id], references: [project_id])
 }
+
+// ==========================================
+// CROSS-BUSINESS EXPENSE TRACKER
+// ==========================================
+
+model Expense {
+  id            String    @id @default(uuid())
+  business_slug String    // tech, realestate, training, coaching
+  category      String    // Petrol, Rent, WiFi, Electricity, Salary, Food, Travel, etc.
+  amount        Decimal
+  description   String?   // What was it for
+  date          DateTime  // When was the expense incurred
+  payment_mode  String?   // Cash, UPI, Bank Transfer, Card
+  notes         String?
+  created_by    String
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  deleted_at    DateTime?
+}

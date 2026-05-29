@@ -9,6 +9,7 @@ export const RE_TABS = [
   { key: 'properties', label: 'Properties', icon: '🏘' },
   { key: 'commission', label: 'Commission', icon: '💰' },
   { key: 'analytics', label: 'Analytics', icon: '📊' },
+  { key: 'expenses', label: 'Expenses', icon: '💸' },
 ] as const;
 
 export type ReTabKey = (typeof RE_TABS)[number]['key'];

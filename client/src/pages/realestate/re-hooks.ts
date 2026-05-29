@@ -200,6 +200,7 @@ export function useReData() {
     re_saveDeal, re_deleteDeal, re_updateDealStatus,
     re_saveProperty, re_deleteProperty,
     re_saveCommission, re_savePayout, re_savePeoplePayment,
+    fetchData
   };
 }
 

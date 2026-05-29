@@ -5,7 +5,7 @@ import {
   Plus, Search, Edit2, Trash2, Calendar, FileText, 
   BarChart2, BookOpen, Clock, Tag, ExternalLink, GraduationCap, Users, ClipboardList, Check,
   Pin, User, DollarSign, Sparkles, Link, RefreshCw, FileSpreadsheet, 
-  FileDown, CheckCircle, Percent, AlertTriangle, PlayCircle
+  FileDown, CheckCircle, Percent, AlertTriangle, PlayCircle, Wallet
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RePie, Pie, Cell } from 'recharts';
 import apiClient from '../../api/apiClient';
@@ -15,6 +15,7 @@ import { exportToCSV, exportToPDF } from '../../utils/exportHelpers';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { WhatsAppButton } from '../../components/ui/WhatsAppButton';
 import { RevenueHeroCard } from '../../components/ui/RevenueHeroCard';
+import { ExpensesTab } from '../../components/ui/ExpensesTab';
 
 // ==========================================
 // INTERFACES
@@ -82,7 +83,7 @@ interface FeeInstallment {
 }
 
 export const TrainingDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'courses' | 'students' | 'batches' | 'attendance' | 'logs' | 'skills' | 'analytics'>('courses');
+  const [activeTab, setActiveTab] = useState<'courses' | 'students' | 'batches' | 'attendance' | 'logs' | 'skills' | 'analytics' | 'expenses'>('courses');
 
   // Data States
   const [courses, setCourses] = useState<Course[]>([]);
@@ -195,6 +196,7 @@ export const TrainingDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    fetchAnalytics();
   }, []);
 
   useEffect(() => {
@@ -433,7 +435,8 @@ export const TrainingDashboard: React.FC = () => {
           { key: 'attendance', label: 'Attendance', icon: ClipboardList },
           { key: 'logs', label: 'Follow-ups & Logs', icon: FileText },
           { key: 'skills', label: 'Skills Word Cloud', icon: Tag },
-          { key: 'analytics', label: 'Enrollments Analytics', icon: BarChart2 }
+          { key: 'analytics', label: 'Enrollments Analytics', icon: BarChart2 },
+          { key: 'expenses', label: 'Expense Tracker', icon: Wallet }
         ].map((tab) => {
           const Icon = tab.icon;
           return (
@@ -1143,6 +1146,13 @@ export const TrainingDashboard: React.FC = () => {
 
           </div>
         </div>
+      )}
+
+      {/* =======================================================================
+          TAB 8: EXPENSE TRACKER
+          ======================================================================= */}
+      {activeTab === 'expenses' && (
+        <ExpensesTab businessSlug="training" onSave={fetchData} />
       )}
 
       {/* =======================================================================

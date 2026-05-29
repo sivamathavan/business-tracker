@@ -23,6 +23,7 @@ export const getAdminOverview = async (req: AuthenticatedRequest, res: Response,
     const trainingStudents = await prisma.trainingStudent.findMany({ where: { deleted_at: null } });
     const trainingFees = await prisma.trainingFeeInstallment.findMany({ where: { deleted_at: null } });
     const coachingFeeRecords = await prisma.coachingFeeRecord.findMany({ where: { deleted_at: null } });
+    const allExpenses = await prisma.expense.findMany({ where: { deleted_at: null } });
 
     // --- Tech Calculations (mirrors tech.controller getTechAnalytics) ---
     // Collected = sum(amount_received) across all projects
@@ -78,6 +79,13 @@ export const getAdminOverview = async (req: AuthenticatedRequest, res: Response,
     const grandTotalRevenue = techCollected + reCollected + trainingCollected + coachingCollected;
     const grandTotalPending = techPending + rePending + trainingPending + coachingPending;
 
+    // --- Expense Calculations ---
+    const expenseByBiz: Record<string, number> = { tech: 0, realestate: 0, training: 0, coaching: 0 };
+    allExpenses.forEach(e => {
+      expenseByBiz[e.business_slug] = (expenseByBiz[e.business_slug] || 0) + Number(e.amount || 0);
+    });
+    const grandTotalExpenses = Object.values(expenseByBiz).reduce((s, v) => s + v, 0);
+
     // Tile statistics per business
     const businessTiles = businesses.map(b => {
       let revenue = 0;
@@ -115,7 +123,8 @@ export const getAdminOverview = async (req: AuthenticatedRequest, res: Response,
         revenue,
         pending,
         keyCount,
-        label
+        label,
+        expenses: expenseByBiz[b.slug] || 0
       };
     });
 
@@ -124,6 +133,7 @@ export const getAdminOverview = async (req: AuthenticatedRequest, res: Response,
       data: {
         grandTotalRevenue,
         grandTotalPending,
+        grandTotalExpenses,
         businessTiles
       }
     });
@@ -276,9 +286,11 @@ export const resetBusinessData = async (req: AuthenticatedRequest, res: Response
     const { slug } = req.body;
 
     if (slug === 'tech') {
+      await prisma.techProjectMilestone.deleteMany({});
       await prisma.techProject.deleteMany({});
       await prisma.techInvoice.deleteMany({});
       await prisma.techProposal.deleteMany({});
+      await prisma.expense.deleteMany({ where: { business_slug: 'tech' } });
     } else if (slug === 'realestate') {
       await prisma.reActivity.deleteMany({});
       await prisma.rePeoplePayment.deleteMany({});
@@ -287,11 +299,13 @@ export const resetBusinessData = async (req: AuthenticatedRequest, res: Response
       await prisma.reProperty.deleteMany({});
       await prisma.reDeal.deleteMany({});
       await prisma.rePerson.deleteMany({});
+      await prisma.expense.deleteMany({ where: { business_slug: 'realestate' } });
     } else if (slug === 'training') {
       await prisma.trainingCourse.deleteMany({});
       await prisma.trainingStudent.deleteMany({});
       await prisma.trainingBatch.deleteMany({});
       await prisma.trainingStudyLog.deleteMany({});
+      await prisma.expense.deleteMany({ where: { business_slug: 'training' } });
     } else if (slug === 'coaching') {
       await prisma.coachingResult.deleteMany({});
       await prisma.coachingExam.deleteMany({});
@@ -299,6 +313,7 @@ export const resetBusinessData = async (req: AuthenticatedRequest, res: Response
       await prisma.coachingBatch.deleteMany({});
       await prisma.coachingFeeRecord.deleteMany({});
       await prisma.coachingStudent.deleteMany({});
+      await prisma.expense.deleteMany({ where: { business_slug: 'coaching' } });
     } else {
       return res.status(400).json({ success: false, message: 'Invalid business slug.' });
     }
