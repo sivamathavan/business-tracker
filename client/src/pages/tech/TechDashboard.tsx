@@ -430,7 +430,7 @@ export const TechDashboard: React.FC = () => {
     <div className="space-y-6">
       
       {/* Dashboard Sub-navigation tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-brand-border/40 scrollbar-none print-hidden">
+      <div className="flex flex-wrap gap-2 pb-4 border-b border-brand-border/40 print-hidden">
         {[
           { key: 'projects', label: 'Projects Pipeline', icon: Briefcase },
           { key: 'milestones', label: 'Tech Milestones', icon: ListTodo },

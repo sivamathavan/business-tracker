@@ -427,7 +427,7 @@ export const TrainingDashboard: React.FC = () => {
   return (
     <div className="space-y-6 select-none">
       
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-brand-border/40 scrollbar-none print-hidden">
+      <div className="flex flex-wrap gap-2 pb-4 border-b border-brand-border/40 print-hidden">
         {[
           { key: 'courses', label: 'Personal Course Tracker', icon: BookOpen },
           { key: 'students', label: 'Tech Students Register', icon: Users },
