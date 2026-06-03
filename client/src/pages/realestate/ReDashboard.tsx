@@ -7,10 +7,11 @@ import { ReDealsTab } from './ReDealsTab';
 import { RePropertiesTab } from './RePropertiesTab';
 import { ReCommissionTab } from './ReCommissionTab';
 import { ReAnalyticsTab } from './ReAnalyticsTab';
+import { ReMatchTab } from './ReMatchTab';
 import { ExpensesTab } from '../../components/ui/ExpensesTab';
 import { RevenueHeroCard } from '../../components/ui/RevenueHeroCard';
 import { 
-  Home, Users, Handshake, Building2, Landmark, BarChart2, Wallet 
+  Home, Users, Handshake, Building2, Landmark, BarChart2, Wallet, Zap
 } from 'lucide-react';
 
 const TABS_WITH_ICONS = [
@@ -18,6 +19,7 @@ const TABS_WITH_ICONS = [
   { key: 'people', label: 'People & Network', icon: Users },
   { key: 'deals', label: 'Deals', icon: Handshake },
   { key: 'properties', label: 'Properties', icon: Building2 },
+  { key: 'match', label: 'Buyer Match', icon: Zap },
   { key: 'commission', label: 'Commission', icon: Landmark },
   { key: 'analytics', label: 'Analytics', icon: BarChart2 },
   { key: 'expenses', label: 'Expenses', icon: Wallet },
@@ -127,6 +129,13 @@ export default function ReDashboard() {
           deals={data.deals}
           properties={data.properties}
           commissions={data.commissions}
+        />
+      )}
+
+      {activeTab === 'match' && (
+        <ReMatchTab
+          people={data.people}
+          properties={data.properties}
         />
       )}
 

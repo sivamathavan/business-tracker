@@ -7,6 +7,7 @@ export const RE_TABS = [
   { key: 'people', label: 'People & Network', icon: '👥' },
   { key: 'deals', label: 'Deals', icon: '🤝' },
   { key: 'properties', label: 'Properties', icon: '🏘' },
+  { key: 'match', label: 'Buyer Match', icon: '⚡' },
   { key: 'commission', label: 'Commission', icon: '💰' },
   { key: 'analytics', label: 'Analytics', icon: '📊' },
   { key: 'expenses', label: 'Expenses', icon: '💸' },

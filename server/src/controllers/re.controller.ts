@@ -14,7 +14,8 @@ export const getPeople = async (req: AuthenticatedRequest, res: Response, next: 
 const parsePeoplePayload = (body: any) => {
   const data = { ...body };
   if (data.created_at === '') delete data.created_at;
-  if (data.buyer_budget === '') data.buyer_budget = null;
+  if (data.buyer_budget === '' || data.buyer_budget === undefined) data.buyer_budget = null;
+  if (data.buyer_property_type === '' || data.buyer_property_type === 'Any') data.buyer_property_type = null;
   if (data.commission_rate === '') data.commission_rate = 0;
   if (data.total_commission === '') data.total_commission = 0;
   return data;
@@ -104,7 +105,13 @@ export const deleteDeal = async (req: AuthenticatedRequest, res: Response, next:
 
 export const getProperties = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const data = await prisma.reProperty.findMany({ where: { deleted_at: null }, orderBy: { created_at: 'desc' } });
+    const raw = await prisma.reProperty.findMany({ where: { deleted_at: null }, orderBy: { created_at: 'desc' } });
+    // Parse JSON string fields back to JS objects so the client can use them directly
+    const data = raw.map((p: any) => ({
+      ...p,
+      doc_checklist: p.doc_checklist ? JSON.parse(p.doc_checklist) : {},
+      photos: p.photos ? JSON.parse(p.photos) : [],
+    }));
     return res.status(200).json({ success: true, data });
   } catch (error) { next(error); }
 };
