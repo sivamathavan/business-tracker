@@ -56,7 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       name: 'DkProperties',
       path: '/dashboard/realestate',
       icon: Home,
-      roles: ['ADMIN', 'aadanatharakar', 'dkproperties'],
+      roles: ['ADMIN', 'dkproperties'],
       color: 'text-brand-re group-hover:text-brand-re/80',
     },
     {

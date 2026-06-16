@@ -17,6 +17,7 @@ interface Expense {
   business_slug: string;
   category: string;
   amount: number;
+  spent_by: string | null;
   description: string | null;
   date: string;
   payment_mode: string | null;
@@ -91,7 +92,11 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
   const [expenseSearch, setExpenseSearch] = useState('');
   const [expenseSlugFilter, setExpenseSlugFilter] = useState(activeSlug || '');
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('');
+  
+  const [expenseDateType, setExpenseDateType] = useState<'lifetime' | 'month' | 'range'>('lifetime');
   const [expenseMonthFilter, setExpenseMonthFilter] = useState('');
+  const [expenseStartDate, setExpenseStartDate] = useState('');
+  const [expenseEndDate, setExpenseEndDate] = useState('');
 
   // Modal State
   const [expenseModal, setExpenseModal] = useState<{ open: boolean; editRecord: Expense | null }>({ open: false, editRecord: null });
@@ -106,7 +111,11 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
       const params: any = {};
       if (expenseSlugFilter) params.slug = expenseSlugFilter;
       if (expenseCategoryFilter) params.category = expenseCategoryFilter;
-      if (expenseMonthFilter) params.month = expenseMonthFilter;
+      if (expenseDateType === 'month' && expenseMonthFilter) params.month = expenseMonthFilter;
+      if (expenseDateType === 'range' && expenseStartDate && expenseEndDate) {
+        params.startDate = expenseStartDate;
+        params.endDate = expenseEndDate;
+      }
 
       const res = await apiClient.get('/expenses', { params });
       if (res.data.success) {
@@ -123,7 +132,11 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
     if (user?.role !== 'ADMIN') return;
     try {
       const params: any = {};
-      if (expenseMonthFilter) params.month = expenseMonthFilter;
+      if (expenseDateType === 'month' && expenseMonthFilter) params.month = expenseMonthFilter;
+      if (expenseDateType === 'range' && expenseStartDate && expenseEndDate) {
+        params.startDate = expenseStartDate;
+        params.endDate = expenseEndDate;
+      }
       
       const res = await apiClient.get('/expenses/summary/all', { params });
       if (res.data.success) {
@@ -136,11 +149,11 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
 
   useEffect(() => {
     fetchExpenses();
-  }, [expenseSlugFilter, expenseCategoryFilter, expenseMonthFilter]);
+  }, [expenseSlugFilter, expenseCategoryFilter, expenseDateType, expenseMonthFilter, expenseStartDate, expenseEndDate]);
 
   useEffect(() => {
     fetchSummary();
-  }, [expenseMonthFilter]);
+  }, [expenseDateType, expenseMonthFilter, expenseStartDate, expenseEndDate]);
 
   const handleExpenseSubmit = async (data: any) => {
     try {
@@ -206,6 +219,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
       business_slug: exp.business_slug,
       category: isCustom ? '' : exp.category,
       amount: Number(exp.amount),
+      spent_by: exp.spent_by || '',
       description: exp.description || '',
       date: exp.date ? exp.date.split('T')[0] : '',
       payment_mode: exp.payment_mode || '',
@@ -221,6 +235,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
       business_slug: activeSlug || '',
       category: 'Petrol',
       amount: '',
+      spent_by: '',
       description: '',
       date: new Date().toISOString().split('T')[0],
       payment_mode: 'UPI',
@@ -453,16 +468,46 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
               </select>
             </div>
 
-            {/* Month Filter */}
+            {/* Date Filter Type */}
             <div className="relative">
               <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+              <select
+                value={expenseDateType}
+                onChange={(e) => setExpenseDateType(e.target.value as any)}
+                className="pl-8 pr-4 py-2 rounded-xl text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none"
+              >
+                <option value="lifetime">Lifetime</option>
+                <option value="month">Specific Month</option>
+                <option value="range">Custom Range</option>
+              </select>
+            </div>
+
+            {expenseDateType === 'month' && (
               <input
                 type="month"
                 value={expenseMonthFilter}
                 onChange={(e) => setExpenseMonthFilter(e.target.value)}
-                className="pl-8 pr-4 py-1.5 rounded-xl text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none"
+                className="px-3 py-2 rounded-xl text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none"
               />
-            </div>
+            )}
+
+            {expenseDateType === 'range' && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={expenseStartDate}
+                  onChange={(e) => setExpenseStartDate(e.target.value)}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none"
+                />
+                <span className="text-slate-500 text-xs">to</span>
+                <input
+                  type="date"
+                  value={expenseEndDate}
+                  onChange={(e) => setExpenseEndDate(e.target.value)}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none"
+                />
+              </div>
+            )}
           </div>
 
           <button
@@ -505,6 +550,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
                     <tr key={exp.id} className="hover:bg-brand-dark/20 transition-colors">
                       <td className="px-6 py-4 max-w-xs">
                         <p className="font-bold text-slate-200 truncate">{exp.description || 'General Business Expense'}</p>
+                        {exp.spent_by && <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wide">Spent by: <span className="text-slate-300 font-bold">{exp.spent_by}</span></p>}
                         <p className="text-[10px] text-slate-500 mt-0.5">{formatDateStr(exp.date)}</p>
                       </td>
                       {!isScoped && (
@@ -660,6 +706,17 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
               </div>
 
               <div className="grid grid-cols-2 gap-4">
+                {/* Spent By */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Spent By (Name)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Mathavan, Siva"
+                    {...register('spent_by')}
+                    className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold bg-brand-dark/60 border border-brand-border/80 focus:outline-none focus:border-indigo-500 text-slate-200"
+                  />
+                </div>
+
                 {/* Description */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Description</label>

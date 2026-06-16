@@ -25,7 +25,7 @@ interface Project {
   project_name: string;
   client_name: string;
   client_mobile: string | null;
-  project_type: 'Website' | 'Web App' | 'Mobile App' | 'Automation' | 'Marketing';
+  project_type: string;
   status: 'Lead' | 'In Progress' | 'Review' | 'Completed' | 'On Hold';
   priority: 'High' | 'Medium' | 'Low';
   start_date: string | null;
@@ -55,7 +55,7 @@ interface Proposal {
   proposal_id: string;
   lead_name: string;
   lead_mobile: string | null;
-  service_type: 'Website' | 'Web App' | 'Mobile App' | 'Automation' | 'Marketing';
+  service_type: string;
   proposal_value: number;
   date_sent: string | null;
   followup_date: string | null;
@@ -493,11 +493,52 @@ export const TechDashboard: React.FC = () => {
                 className="p-2 bg-slate-900 border border-brand-border/60 rounded-xl text-xs text-slate-200 font-semibold focus:outline-none"
               >
                 <option value="">All Services</option>
-                <option value="Website">Website</option>
-                <option value="Web App">Web App</option>
-                <option value="Mobile App">Mobile App</option>
-                <option value="Automation">Automation</option>
-                <option value="Marketing">Marketing</option>
+                <optgroup label="Development Services">
+                  <option value="Web Design & Development">Web Design & Development</option>
+                  <option value="Web Application Development">Web Application Development</option>
+                  <option value="Mobile App Development">Mobile App Development</option>
+                  <option value="Business Automation">Business Automation & Workflow Tools</option>
+                  <option value="SaaS Product">SaaS Product Development</option>
+                  <option value="API Development">API Development & Integration</option>
+                  <option value="E-commerce">E-commerce Store Development</option>
+                  <option value="CRM / ERP">CRM / ERP Custom Development</option>
+                  <option value="Landing Page">Landing Page Development</option>
+                  <option value="PWA">Progressive Web Apps (PWA)</option>
+                </optgroup>
+                <optgroup label="Business Setup Services">
+                  <option value="Business Email Setup">Business Email Setup</option>
+                  <option value="Payment Gateway">Payment Gateway Integration</option>
+                  <option value="Chatbot Setup">Chatbot Setup</option>
+                  <option value="QR Code Menu">QR Code Menu / Digital Catalogue</option>
+                  <option value="Online Booking System">Online Booking System Setup</option>
+                </optgroup>
+                <optgroup label="Tech Support & Maintenance">
+                  <option value="Website AMC">Website AMC</option>
+                  <option value="Domain & Hosting Setup">Domain & Hosting Setup</option>
+                  <option value="SSL Certificate Setup">SSL Certificate Setup</option>
+                  <option value="Website Speed Optimization">Website Speed Optimization</option>
+                  <option value="Cloud Server Setup">Cloud Server Setup</option>
+                  <option value="Database Management">Database Management & Backup</option>
+                  <option value="Software Bug Fixing">Software Bug Fixing & Support</option>
+                </optgroup>
+                <optgroup label="Digital Marketing Services">
+                  <option value="GMB Setup">Google My Business (GMB) Setup</option>
+                  <option value="SEO">Search Engine Optimization (SEO)</option>
+                  <option value="Social Media Handling">Social Media Handling</option>
+                  <option value="Google/Meta Ads">Google Ads / Meta Ads Management</option>
+                  <option value="WhatsApp Marketing">WhatsApp Marketing Setup</option>
+                  <option value="Email Marketing">Email Marketing Campaigns</option>
+                  <option value="Content Writing">Content Writing & Copywriting</option>
+                  <option value="YouTube Channel Setup">YouTube Channel Setup</option>
+                </optgroup>
+                <optgroup label="Design Services">
+                  <option value="Logo Design">Logo Design & Brand Identity</option>
+                  <option value="UI/UX Design">UI/UX Design</option>
+                  <option value="Social Media Post Design">Social Media Post Design</option>
+                  <option value="Brochure Design">Brochure / Flyer / Banner Design</option>
+                  <option value="Pitch Deck Design">Pitch Deck / Presentation Design</option>
+                  <option value="Brand Style Guide">Brand Style Guide Creation</option>
+                </optgroup>
               </select>
 
               <select
@@ -1205,11 +1246,52 @@ export const TechDashboard: React.FC = () => {
                   {...register('project_type')}
                   className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-tech"
                 >
-                  <option value="Website">Website</option>
-                  <option value="Web App">Web App</option>
-                  <option value="Mobile App">Mobile App</option>
-                  <option value="Automation">Automation</option>
-                  <option value="Marketing">Marketing</option>
+                  <optgroup label="Development Services">
+                    <option value="Web Design & Development">Web Design & Development</option>
+                    <option value="Web Application Development">Web Application Development</option>
+                    <option value="Mobile App Development">Mobile App Development</option>
+                    <option value="Business Automation">Business Automation & Workflow Tools</option>
+                    <option value="SaaS Product">SaaS Product Development</option>
+                    <option value="API Development">API Development & Integration</option>
+                    <option value="E-commerce">E-commerce Store Development</option>
+                    <option value="CRM / ERP">CRM / ERP Custom Development</option>
+                    <option value="Landing Page">Landing Page Development</option>
+                    <option value="PWA">Progressive Web Apps (PWA)</option>
+                  </optgroup>
+                  <optgroup label="Business Setup Services">
+                    <option value="Business Email Setup">Business Email Setup</option>
+                    <option value="Payment Gateway">Payment Gateway Integration</option>
+                    <option value="Chatbot Setup">Chatbot Setup</option>
+                    <option value="QR Code Menu">QR Code Menu / Digital Catalogue</option>
+                    <option value="Online Booking System">Online Booking System Setup</option>
+                  </optgroup>
+                  <optgroup label="Tech Support & Maintenance">
+                    <option value="Website AMC">Website AMC</option>
+                    <option value="Domain & Hosting Setup">Domain & Hosting Setup</option>
+                    <option value="SSL Certificate Setup">SSL Certificate Setup</option>
+                    <option value="Website Speed Optimization">Website Speed Optimization</option>
+                    <option value="Cloud Server Setup">Cloud Server Setup</option>
+                    <option value="Database Management">Database Management & Backup</option>
+                    <option value="Software Bug Fixing">Software Bug Fixing & Support</option>
+                  </optgroup>
+                  <optgroup label="Digital Marketing Services">
+                    <option value="GMB Setup">Google My Business (GMB) Setup</option>
+                    <option value="SEO">Search Engine Optimization (SEO)</option>
+                    <option value="Social Media Handling">Social Media Handling</option>
+                    <option value="Google/Meta Ads">Google Ads / Meta Ads Management</option>
+                    <option value="WhatsApp Marketing">WhatsApp Marketing Setup</option>
+                    <option value="Email Marketing">Email Marketing Campaigns</option>
+                    <option value="Content Writing">Content Writing & Copywriting</option>
+                    <option value="YouTube Channel Setup">YouTube Channel Setup</option>
+                  </optgroup>
+                  <optgroup label="Design Services">
+                    <option value="Logo Design">Logo Design & Brand Identity</option>
+                    <option value="UI/UX Design">UI/UX Design</option>
+                    <option value="Social Media Post Design">Social Media Post Design</option>
+                    <option value="Brochure Design">Brochure / Flyer / Banner Design</option>
+                    <option value="Pitch Deck Design">Pitch Deck / Presentation Design</option>
+                    <option value="Brand Style Guide">Brand Style Guide Creation</option>
+                  </optgroup>
                 </select>
               </div>
 
@@ -1443,11 +1525,52 @@ export const TechDashboard: React.FC = () => {
                     {...register('service_type')}
                     className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
                   >
-                    <option value="Website">Website</option>
-                    <option value="Web App">Web App</option>
-                    <option value="Mobile App">Mobile App</option>
-                    <option value="Automation">Automation</option>
-                    <option value="Marketing">Marketing</option>
+                    <optgroup label="Development Services">
+                      <option value="Web Design & Development">Web Design & Development</option>
+                      <option value="Web Application Development">Web Application Development</option>
+                      <option value="Mobile App Development">Mobile App Development</option>
+                      <option value="Business Automation">Business Automation & Workflow Tools</option>
+                      <option value="SaaS Product">SaaS Product Development</option>
+                      <option value="API Development">API Development & Integration</option>
+                      <option value="E-commerce">E-commerce Store Development</option>
+                      <option value="CRM / ERP">CRM / ERP Custom Development</option>
+                      <option value="Landing Page">Landing Page Development</option>
+                      <option value="PWA">Progressive Web Apps (PWA)</option>
+                    </optgroup>
+                    <optgroup label="Business Setup Services">
+                      <option value="Business Email Setup">Business Email Setup</option>
+                      <option value="Payment Gateway">Payment Gateway Integration</option>
+                      <option value="Chatbot Setup">Chatbot Setup</option>
+                      <option value="QR Code Menu">QR Code Menu / Digital Catalogue</option>
+                      <option value="Online Booking System">Online Booking System Setup</option>
+                    </optgroup>
+                    <optgroup label="Tech Support & Maintenance">
+                      <option value="Website AMC">Website AMC</option>
+                      <option value="Domain & Hosting Setup">Domain & Hosting Setup</option>
+                      <option value="SSL Certificate Setup">SSL Certificate Setup</option>
+                      <option value="Website Speed Optimization">Website Speed Optimization</option>
+                      <option value="Cloud Server Setup">Cloud Server Setup</option>
+                      <option value="Database Management">Database Management & Backup</option>
+                      <option value="Software Bug Fixing">Software Bug Fixing & Support</option>
+                    </optgroup>
+                    <optgroup label="Digital Marketing Services">
+                      <option value="GMB Setup">Google My Business (GMB) Setup</option>
+                      <option value="SEO">Search Engine Optimization (SEO)</option>
+                      <option value="Social Media Handling">Social Media Handling</option>
+                      <option value="Google/Meta Ads">Google Ads / Meta Ads Management</option>
+                      <option value="WhatsApp Marketing">WhatsApp Marketing Setup</option>
+                      <option value="Email Marketing">Email Marketing Campaigns</option>
+                      <option value="Content Writing">Content Writing & Copywriting</option>
+                      <option value="YouTube Channel Setup">YouTube Channel Setup</option>
+                    </optgroup>
+                    <optgroup label="Design Services">
+                      <option value="Logo Design">Logo Design & Brand Identity</option>
+                      <option value="UI/UX Design">UI/UX Design</option>
+                      <option value="Social Media Post Design">Social Media Post Design</option>
+                      <option value="Brochure Design">Brochure / Flyer / Banner Design</option>
+                      <option value="Pitch Deck Design">Pitch Deck / Presentation Design</option>
+                      <option value="Brand Style Guide">Brand Style Guide Creation</option>
+                    </optgroup>
                   </select>
                 </div>
               </div>

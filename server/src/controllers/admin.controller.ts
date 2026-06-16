@@ -16,14 +16,26 @@ export const getAdminOverview = async (req: AuthenticatedRequest, res: Response,
       orderBy: { name: 'asc' }
     });
 
-    // 2. Fetch all data — using IDENTICAL logic as each individual portal's analytics
-    const techProjects = await prisma.techProject.findMany({ where: { deleted_at: null } });
-    const reDeals = await prisma.reDeal.findMany({ where: { deleted_at: null } });
-    const reCommissions = await prisma.reCommissionRecord.findMany({ where: { deleted_at: null } });
-    const trainingStudents = await prisma.trainingStudent.findMany({ where: { deleted_at: null } });
-    const trainingFees = await prisma.trainingFeeInstallment.findMany({ where: { deleted_at: null } });
-    const coachingFeeRecords = await prisma.coachingFeeRecord.findMany({ where: { deleted_at: null } });
-    const allExpenses = await prisma.expense.findMany({ where: { deleted_at: null } });
+    // 2. Fetch all data concurrently with exact column selection for massive performance boost
+    const [
+      techProjects,
+      reDeals,
+      reCommissions,
+      trainingStudents,
+      trainingFees,
+      coachingFeeRecords,
+      allExpenses,
+      coachingActiveCount
+    ] = await Promise.all([
+      prisma.techProject.findMany({ where: { deleted_at: null }, select: { amount_received: true, total_amount: true } }),
+      prisma.reDeal.findMany({ where: { deleted_at: null }, select: { commission_received: true, commission_amount: true } }),
+      prisma.reCommissionRecord.findMany({ where: { deleted_at: null }, select: { commission_received: true, commission_expected: true } }),
+      prisma.trainingStudent.findMany({ where: { deleted_at: null }, select: { student_id: true, total_fee: true } }),
+      prisma.trainingFeeInstallment.findMany({ where: { deleted_at: null }, select: { student_id: true, amount: true, status: true } }),
+      prisma.coachingFeeRecord.findMany({ where: { deleted_at: null }, select: { fee_amount: true, status: true } }),
+      prisma.expense.findMany({ where: { deleted_at: null }, select: { business_slug: true, amount: true } }),
+      prisma.coachingStudent.count({ where: { status: 'Active', deleted_at: null } })
+    ]);
 
     // --- Tech Calculations (mirrors tech.controller getTechAnalytics) ---
     // Collected = sum(amount_received) across all projects
@@ -71,9 +83,7 @@ export const getAdminOverview = async (req: AuthenticatedRequest, res: Response,
     const coachingFeesUnpaid = coachingFeeRecords.filter(f => f.status === 'Pending' || f.status === 'Overdue');
     const coachingCollected = coachingFeesPaid.reduce((sum, f) => sum + Number(f.fee_amount), 0);
     const coachingPending = coachingFeesUnpaid.reduce((sum, f) => sum + Number(f.fee_amount), 0);
-    const coachingActiveCount = await prisma.coachingStudent.count({
-      where: { status: 'Active', deleted_at: null }
-    });
+    // (coachingActiveCount is now fetched concurrently above)
 
     // Consolidated Metrics
     const grandTotalRevenue = techCollected + reCollected + trainingCollected + coachingCollected;
@@ -350,16 +360,22 @@ export const getConsolidatedRevenueTrend = async (req: AuthenticatedRequest, res
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const currentYear = new Date().getFullYear();
 
-    // Fetch data — using SAME sources as individual portals
+    // Fetch data concurrently with exact column selection for massive performance boost
     // Tech: uses project amount_received grouped by project creation month (NOT invoices)
     // RE: uses closed deal commissions grouped by deal creation month
     // Training: uses amount_paid grouped by enrollment_date month
     // Coaching: uses paid fee records grouped by paid_date month
-    const techProjects = await prisma.techProject.findMany({ where: { deleted_at: null } });
-    const reCommissions = await prisma.reCommissionRecord.findMany({ where: { deleted_at: null } });
-    const trainingStudents = await prisma.trainingStudent.findMany({ where: { deleted_at: null } });
-    const trainingFees = await prisma.trainingFeeInstallment.findMany({ where: { deleted_at: null } });
-    const coachingFees = await prisma.coachingFeeRecord.findMany({ where: { status: 'Paid', deleted_at: null } });
+    const [
+      techProjects,
+      reCommissions,
+      trainingFees,
+      coachingFees
+    ] = await Promise.all([
+      prisma.techProject.findMany({ where: { deleted_at: null }, select: { created_at: true, amount_received: true } }),
+      prisma.reCommissionRecord.findMany({ where: { deleted_at: null }, select: { created_at: true, commission_received: true } }),
+      prisma.trainingFeeInstallment.findMany({ where: { deleted_at: null }, select: { date: true, status: true, amount: true } }),
+      prisma.coachingFeeRecord.findMany({ where: { status: 'Paid', deleted_at: null }, select: { paid_date: true, fee_amount: true } })
+    ]);
 
     const consolidatedTrend = months.map((m, idx) => {
       // Tech: sum amount_received for projects created in this month
@@ -425,54 +441,49 @@ export const globalSearch = async (req: AuthenticatedRequest, res: Response, nex
 
     const searchStr = query.toLowerCase();
 
-    // Search Tech Projects (Clients)
-    const techClients = await prisma.techProject.findMany({
-      where: {
-        deleted_at: null,
-        OR: [
-          { client_name: { contains: searchStr, mode: 'insensitive' } },
-          { client_mobile: { contains: searchStr } }
-        ]
-      },
-      select: { project_id: true, client_name: true, client_mobile: true, project_name: true, status: true, created_at: true }
-    });
-
-    // Search Real Estate (People)
-    const rePeople = await prisma.rePerson.findMany({
-      where: {
-        deleted_at: null,
-        OR: [
-          { name: { contains: searchStr, mode: 'insensitive' } },
-          { mobile: { contains: searchStr } }
-        ]
-      },
-      select: { id: true, name: true, mobile: true, person_type: true, district: true, status: true, created_at: true }
-    });
-
-    // Search Training Students
-    const trainingStudents = await prisma.trainingStudent.findMany({
-      where: {
-        deleted_at: null,
-        OR: [
-          { student_name: { contains: searchStr, mode: 'insensitive' } },
-          { mobile: { contains: searchStr } }
-        ]
-      },
-      select: { student_id: true, student_name: true, mobile: true, course_enrolled: true, batch_name: true, status: true, created_at: true }
-    });
-
-    // Search Coaching Students
-    const coachingStudents = await prisma.coachingStudent.findMany({
-      where: {
-        deleted_at: null,
-        OR: [
-          { student_name: { contains: searchStr, mode: 'insensitive' } },
-          { parent_mobile: { contains: searchStr } },
-          { student_mobile: { contains: searchStr } }
-        ]
-      },
-      select: { student_id: true, student_name: true, parent_mobile: true, standard: true, school_name: true, status: true, created_at: true }
-    });
+    const [techClients, rePeople, trainingStudents, coachingStudents] = await Promise.all([
+      prisma.techProject.findMany({
+        where: {
+          deleted_at: null,
+          OR: [
+            { client_name: { contains: searchStr, mode: 'insensitive' } },
+            { client_mobile: { contains: searchStr } }
+          ]
+        },
+        select: { project_id: true, client_name: true, client_mobile: true, project_name: true, status: true, created_at: true }
+      }),
+      prisma.rePerson.findMany({
+        where: {
+          deleted_at: null,
+          OR: [
+            { name: { contains: searchStr, mode: 'insensitive' } },
+            { mobile: { contains: searchStr } }
+          ]
+        },
+        select: { id: true, name: true, mobile: true, person_type: true, district: true, status: true, created_at: true }
+      }),
+      prisma.trainingStudent.findMany({
+        where: {
+          deleted_at: null,
+          OR: [
+            { student_name: { contains: searchStr, mode: 'insensitive' } },
+            { mobile: { contains: searchStr } }
+          ]
+        },
+        select: { student_id: true, student_name: true, mobile: true, course_enrolled: true, batch_name: true, status: true, created_at: true }
+      }),
+      prisma.coachingStudent.findMany({
+        where: {
+          deleted_at: null,
+          OR: [
+            { student_name: { contains: searchStr, mode: 'insensitive' } },
+            { parent_mobile: { contains: searchStr } },
+            { student_mobile: { contains: searchStr } }
+          ]
+        },
+        select: { student_id: true, student_name: true, parent_mobile: true, standard: true, school_name: true, status: true, created_at: true }
+      })
+    ]);
 
     // Normalize and aggregate results
     const results = [

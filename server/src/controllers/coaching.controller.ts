@@ -814,17 +814,20 @@ export const deleteCoachingBatch = async (req: AuthenticatedRequest, res: Respon
 
 export const getCoachingAnalytics = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const activeStudents = await prisma.coachingStudent.findMany({
-      where: { status: 'Active', deleted_at: null }
-    });
-
-    const feeRecords = await prisma.coachingFeeRecord.findMany({
-      where: { deleted_at: null }
-    });
-
-    const staff = await prisma.coachingStaff.findMany({
-      where: { status: 'Active', deleted_at: null }
-    });
+    const [activeStudents, feeRecords, staff] = await Promise.all([
+      prisma.coachingStudent.findMany({
+        where: { status: 'Active', deleted_at: null },
+        select: { student_id: true, monthly_fee: true, standard: true }
+      }),
+      prisma.coachingFeeRecord.findMany({
+        where: { deleted_at: null },
+        select: { student_id: true, month_year: true, fee_amount: true, status: true }
+      }),
+      prisma.coachingStaff.findMany({
+        where: { status: 'Active', deleted_at: null },
+        select: { monthly_salary: true }
+      })
+    ]);
 
     // 1. Total monthly expected = sum(active students * their monthly fee)
     const totalExpectedThisMonth = activeStudents.reduce((sum, s) => sum + Number(s.monthly_fee), 0);

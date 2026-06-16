@@ -301,10 +301,12 @@ export const createActivity = async (req: AuthenticatedRequest, res: Response, n
 
 export const getReAnalytics = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const deals = await prisma.reDeal.findMany({ where: { deleted_at: null } });
-    const commissions = await prisma.reCommissionRecord.findMany({ where: { deleted_at: null } });
-    const people = await prisma.rePerson.findMany({ where: { deleted_at: null } });
-    const properties = await prisma.reProperty.findMany({ where: { deleted_at: null } });
+    const [deals, commissions, people, properties] = await Promise.all([
+      prisma.reDeal.findMany({ where: { deleted_at: null }, select: { status: true, commission_amount: true, commission_received: true } }),
+      prisma.reCommissionRecord.findMany({ where: { deleted_at: null }, select: { commission_expected: true, commission_received: true } }),
+      prisma.rePerson.findMany({ where: { deleted_at: null }, select: { person_type: true, status: true } }),
+      prisma.reProperty.findMany({ where: { deleted_at: null }, select: { status: true } })
+    ]);
 
     const totalDeals = deals.length;
     const closedDeals = deals.filter((d: any) => d.status === 'Closed' || d.status === 'Completed').length;

@@ -409,10 +409,12 @@ export const deleteStudyLog = async (req: AuthenticatedRequest, res: Response, n
 
 export const getTrainingAnalytics = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const courses = await prisma.trainingCourse.findMany({ where: { deleted_at: null } });
-    const students = await prisma.trainingStudent.findMany({ where: { deleted_at: null } });
-    const batches = await prisma.trainingBatch.findMany({ where: { deleted_at: null } });
-    const studyLogs = await prisma.trainingStudyLog.findMany({ where: { deleted_at: null } });
+    const [courses, students, studyLogs, fees] = await Promise.all([
+      prisma.trainingCourse.findMany({ where: { deleted_at: null }, select: { skill_tags: true, is_pinned: true } }),
+      prisma.trainingStudent.findMany({ where: { deleted_at: null }, select: { student_id: true, total_fee: true, course_enrolled: true, batch_name: true, status: true, enrollment_date: true } }),
+      prisma.trainingStudyLog.findMany({ where: { deleted_at: null }, select: { log_date: true, hours_studied: true } }),
+      prisma.trainingFeeInstallment.findMany({ where: { deleted_at: null }, select: { student_id: true, status: true, amount: true, date: true } })
+    ]);
 
     // 1. Dynamic Skills Cloud
     const tagCount: Record<string, number> = {};
@@ -434,8 +436,7 @@ export const getTrainingAnalytics = async (req: AuthenticatedRequest, res: Respo
     // 2. Fee analytics (Expected vs Collected)
     let totalExpected = 0;
     
-    // We will calculate paid from installments
-    const fees = await prisma.trainingFeeInstallment.findMany({ where: { deleted_at: null } });
+    // We already fetched fees concurrently above
     let totalCollected = 0;
     let totalPending = 0;
 
@@ -488,7 +489,7 @@ export const getTrainingAnalytics = async (req: AuthenticatedRequest, res: Respo
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const currentYear = new Date().getFullYear();
 
-    const allFees = await prisma.trainingFeeInstallment.findMany({ where: { deleted_at: null } });
+    const allFees = fees;
     const monthlyTrend = months.map((m, idx) => {
       const monthFees = allFees.filter(f => {
         if (!f.date || f.status !== 'Paid') return false;

@@ -31,8 +31,13 @@ export const getExpenses = async (req: AuthenticatedRequest, res: Response, next
       where.business_slug = slug;
     }
 
-    // Optional month filter (format: "2026-05")
-    if (month && typeof month === 'string') {
+    // Custom date range filter (overrides month if provided)
+    if (req.query.startDate && req.query.endDate) {
+      where.date = {
+        gte: new Date(req.query.startDate as string),
+        lt: new Date(new Date(req.query.endDate as string).getTime() + 24 * 60 * 60 * 1000) // Include end date fully
+      };
+    } else if (month && typeof month === 'string') {
       const [year, mon] = month.split('-').map(Number);
       if (year && mon) {
         const startDate = new Date(year, mon - 1, 1);
@@ -90,7 +95,7 @@ export const getExpenseById = async (req: AuthenticatedRequest, res: Response, n
 
 export const createExpense = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const { business_slug, category, amount, description, date, payment_mode, notes } = req.body;
+    const { business_slug, category, amount, spent_by, description, date, payment_mode, notes } = req.body;
 
     // Non-admin users can only add expenses for their own business
     if (req.user?.role !== 'ADMIN' && business_slug !== req.user?.businessSlug) {
@@ -102,6 +107,7 @@ export const createExpense = async (req: AuthenticatedRequest, res: Response, ne
         business_slug,
         category,
         amount: Number(amount || 0),
+        spent_by: spent_by || null,
         description: description || null,
         date: new Date(date),
         payment_mode: payment_mode || null,
@@ -131,7 +137,7 @@ export const createExpense = async (req: AuthenticatedRequest, res: Response, ne
 export const updateExpense = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { business_slug, category, amount, description, date, payment_mode, notes } = req.body;
+    const { business_slug, category, amount, spent_by, description, date, payment_mode, notes } = req.body;
 
     const existing = await prisma.expense.findUnique({ where: { id } });
     if (!existing || existing.deleted_at) {
@@ -149,6 +155,7 @@ export const updateExpense = async (req: AuthenticatedRequest, res: Response, ne
         business_slug: business_slug !== undefined ? business_slug : existing.business_slug,
         category: category !== undefined ? category : existing.category,
         amount: amount !== undefined ? Number(amount) : existing.amount,
+        spent_by: spent_by !== undefined ? spent_by : existing.spent_by,
         description: description !== undefined ? description : existing.description,
         date: date !== undefined ? new Date(date) : existing.date,
         payment_mode: payment_mode !== undefined ? payment_mode : existing.payment_mode,
@@ -217,8 +224,13 @@ export const getExpenseSummary = async (req: AuthenticatedRequest, res: Response
 
     const where: any = { deleted_at: null };
 
-    // Optional month filter
-    if (month && typeof month === 'string') {
+    // Custom date range filter (overrides month if provided)
+    if (req.query.startDate && req.query.endDate) {
+      where.date = {
+        gte: new Date(req.query.startDate as string),
+        lt: new Date(new Date(req.query.endDate as string).getTime() + 24 * 60 * 60 * 1000) // Include end date fully
+      };
+    } else if (month && typeof month === 'string') {
       const [year, mon] = month.split('-').map(Number);
       if (year && mon) {
         const startDate = new Date(year, mon - 1, 1);

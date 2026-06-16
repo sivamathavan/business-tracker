@@ -353,8 +353,16 @@ export const deleteProposal = async (req: AuthenticatedRequest, res: Response, n
 export const getTechAnalytics = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     // 1. Core aggregates
-    const projects = await prisma.techProject.findMany({ where: { deleted_at: null } });
-    const invoices = await prisma.techInvoice.findMany({ where: { deleted_at: null } });
+    const [projects, invoices] = await Promise.all([
+      prisma.techProject.findMany({ 
+        where: { deleted_at: null },
+        select: { project_type: true, total_amount: true, amount_received: true, client_name: true, client_mobile: true }
+      }),
+      prisma.techInvoice.findMany({ 
+        where: { deleted_at: null },
+        select: { date_sent: true, amount: true, status: true }
+      })
+    ]);
 
     let collected = 0;
     let pending = 0;
