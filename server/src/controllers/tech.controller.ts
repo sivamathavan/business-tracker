@@ -364,11 +364,40 @@ export const getTechAnalytics = async (req: AuthenticatedRequest, res: Response,
       })
     ]);
 
+    const { month, startDate, endDate } = req.query;
+    let filterStart: Date | null = null;
+    let filterEnd: Date | null = null;
+    
+    if (startDate && endDate) {
+      filterStart = new Date(startDate as string);
+      filterEnd = new Date(new Date(endDate as string).getTime() + 24 * 60 * 60 * 1000);
+    } else if (month && typeof month === 'string') {
+      const [year, mon] = month.split('-').map(Number);
+      if (year && mon) {
+        filterStart = new Date(year, mon - 1, 1);
+        filterEnd = new Date(year, mon, 1);
+      }
+    }
+
+    const isWithinFilter = (d: Date | string | null | undefined) => {
+      if (!filterStart || !filterEnd || !d) return true;
+      const date = new Date(d);
+      return date >= filterStart && date < filterEnd;
+    };
+
     let collected = 0;
     let pending = 0;
 
+    const filteredInvoices = invoices.filter(inv => isWithinFilter(inv.date_sent));
+
+    filteredInvoices.forEach(inv => {
+      if (inv.status === 'Paid') {
+        collected += Number(inv.amount || 0);
+      }
+    });
+
+    // Pending is usually lifetime snapshot, so we sum lifetime pending from projects
     projects.forEach(p => {
-      collected += Number(p.amount_received || 0);
       pending += Math.max(0, Number(p.total_amount || 0) - Number(p.amount_received || 0));
     });
 

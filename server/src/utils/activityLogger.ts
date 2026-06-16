@@ -3,7 +3,7 @@ import { prisma } from '../prisma';
 export async function logActivity(
   userId: string,
   business: string,
-  actionType: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN',
+  actionType: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'EXPORT' | 'IMPORT',
   recordName: string
 ) {
   try {

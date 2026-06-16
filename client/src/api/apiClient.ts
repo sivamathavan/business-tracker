@@ -59,10 +59,14 @@ const processQueue = (error: any, token: string | null = null) => {
 
 apiClient.interceptors.response.use(
   (response) => {
-    // Cache successful GET responses for 30s
-    if (response.config.method === 'get' && response.config.url) {
+    const method = response.config.method?.toLowerCase();
+    if (method === 'get' && response.config.url) {
+      // Cache successful GET responses for 30s
       const cacheKey = `${response.config.url}${JSON.stringify(response.config.params || {})}`;
       setCache(cacheKey, response.data);
+    } else if (['post', 'put', 'delete', 'patch'].includes(method || '')) {
+      // Invalidate entire cache on any mutation
+      cache.clear();
     }
     return response;
   },

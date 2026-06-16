@@ -301,12 +301,36 @@ export const createActivity = async (req: AuthenticatedRequest, res: Response, n
 
 export const getReAnalytics = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const [deals, commissions, people, properties] = await Promise.all([
-      prisma.reDeal.findMany({ where: { deleted_at: null }, select: { status: true, commission_amount: true, commission_received: true } }),
-      prisma.reCommissionRecord.findMany({ where: { deleted_at: null }, select: { commission_expected: true, commission_received: true } }),
+    const [allDeals, allCommissions, people, properties] = await Promise.all([
+      prisma.reDeal.findMany({ where: { deleted_at: null }, select: { status: true, commission_amount: true, commission_received: true, created_at: true } }),
+      prisma.reCommissionRecord.findMany({ where: { deleted_at: null }, select: { commission_expected: true, commission_received: true, created_at: true } }),
       prisma.rePerson.findMany({ where: { deleted_at: null }, select: { person_type: true, status: true } }),
       prisma.reProperty.findMany({ where: { deleted_at: null }, select: { status: true } })
     ]);
+
+    const { month, startDate, endDate } = req.query;
+    let filterStart: Date | null = null;
+    let filterEnd: Date | null = null;
+    
+    if (startDate && endDate) {
+      filterStart = new Date(startDate as string);
+      filterEnd = new Date(new Date(endDate as string).getTime() + 24 * 60 * 60 * 1000);
+    } else if (month && typeof month === 'string') {
+      const [year, mon] = month.split('-').map(Number);
+      if (year && mon) {
+        filterStart = new Date(year, mon - 1, 1);
+        filterEnd = new Date(year, mon, 1);
+      }
+    }
+
+    const isWithinFilter = (d: Date | string | null | undefined) => {
+      if (!filterStart || !filterEnd || !d) return true;
+      const date = new Date(d);
+      return date >= filterStart && date < filterEnd;
+    };
+
+    const deals = allDeals.filter(d => isWithinFilter(d.created_at));
+    const commissions = allCommissions.filter(c => isWithinFilter(c.created_at));
 
     const totalDeals = deals.length;
     const closedDeals = deals.filter((d: any) => d.status === 'Closed' || d.status === 'Completed').length;

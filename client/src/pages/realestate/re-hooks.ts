@@ -72,6 +72,15 @@ export function useReData() {
     fetchData();
   }, []);
 
+  const fetchAnalytics = useCallback(async (params: any) => {
+    try {
+      const stats = await apiClient.get('/re/analytics', { params });
+      if (stats.data.success) setReStats(stats.data.analytics);
+    } catch (e) {
+      console.error("Failed to load RE analytics", e);
+    }
+  }, []);
+
   // ── People CRUD ─────────────────────
   const re_savePerson = useCallback(async (p: RePerson, isEdit: boolean) => {
     try {
@@ -200,7 +209,7 @@ export function useReData() {
     re_saveDeal, re_deleteDeal, re_updateDealStatus,
     re_saveProperty, re_deleteProperty,
     re_saveCommission, re_savePayout, re_savePeoplePayment,
-    fetchData
+    fetchData, fetchAnalytics
   };
 }
 

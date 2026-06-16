@@ -296,34 +296,47 @@ export const resetBusinessData = async (req: AuthenticatedRequest, res: Response
     const { slug } = req.body;
 
     if (slug === 'tech') {
-      await prisma.techProjectMilestone.deleteMany({});
-      await prisma.techProject.deleteMany({});
-      await prisma.techInvoice.deleteMany({});
-      await prisma.techProposal.deleteMany({});
-      await prisma.expense.deleteMany({ where: { business_slug: 'tech' } });
+      // All-or-nothing deletion using interactive transaction
+      await prisma.$transaction([
+        prisma.techInvoice.deleteMany({}),
+        prisma.techProjectMilestone.deleteMany({}),
+        prisma.techProject.deleteMany({}),
+        prisma.techProposal.deleteMany({}),
+        prisma.expense.deleteMany({ where: { business_slug: 'tech' } }),
+      ]);
     } else if (slug === 'realestate') {
-      await prisma.reActivity.deleteMany({});
-      await prisma.rePeoplePayment.deleteMany({});
-      await prisma.rePayout.deleteMany({});
-      await prisma.reCommissionRecord.deleteMany({});
-      await prisma.reProperty.deleteMany({});
-      await prisma.reDeal.deleteMany({});
-      await prisma.rePerson.deleteMany({});
-      await prisma.expense.deleteMany({ where: { business_slug: 'realestate' } });
+      await prisma.$transaction([
+        prisma.reActivity.deleteMany({}),
+        prisma.rePayout.deleteMany({}),
+        prisma.reCommissionRecord.deleteMany({}),
+        prisma.reDeal.deleteMany({}),
+        prisma.rePeoplePayment.deleteMany({}),
+        prisma.reProperty.deleteMany({}),
+        prisma.rePerson.deleteMany({}),
+        prisma.expense.deleteMany({ where: { business_slug: 'realestate' } }),
+      ]);
     } else if (slug === 'training') {
-      await prisma.trainingCourse.deleteMany({});
-      await prisma.trainingStudent.deleteMany({});
-      await prisma.trainingBatch.deleteMany({});
-      await prisma.trainingStudyLog.deleteMany({});
-      await prisma.expense.deleteMany({ where: { business_slug: 'training' } });
+      await prisma.$transaction([
+        prisma.trainingAttendance.deleteMany({}),
+        prisma.trainingFeeInstallment.deleteMany({}),
+        prisma.trainingStudyLog.deleteMany({}),
+        prisma.trainingStudent.deleteMany({}),
+        prisma.trainingBatch.deleteMany({}),
+        prisma.trainingCourse.deleteMany({}),
+        prisma.expense.deleteMany({ where: { business_slug: 'training' } }),
+      ]);
     } else if (slug === 'coaching') {
-      await prisma.coachingResult.deleteMany({});
-      await prisma.coachingExam.deleteMany({});
-      await prisma.coachingStaff.deleteMany({});
-      await prisma.coachingBatch.deleteMany({});
-      await prisma.coachingFeeRecord.deleteMany({});
-      await prisma.coachingStudent.deleteMany({});
-      await prisma.expense.deleteMany({ where: { business_slug: 'coaching' } });
+      await prisma.$transaction([
+        prisma.coachingResult.deleteMany({}),
+        prisma.coachingAttendance.deleteMany({}),
+        prisma.coachingFeeRecord.deleteMany({}),
+        prisma.coachingExam.deleteMany({}),
+        prisma.coachingEnrollment.deleteMany({}),
+        prisma.coachingStudent.deleteMany({}),
+        prisma.coachingBatch.deleteMany({}),
+        prisma.coachingStaff.deleteMany({}),
+        prisma.expense.deleteMany({ where: { business_slug: 'coaching' } }),
+      ]);
     } else {
       return res.status(400).json({ success: false, message: 'Invalid business slug.' });
     }
@@ -525,6 +538,141 @@ export const globalSearch = async (req: AuthenticatedRequest, res: Response, nex
     results.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
     return res.status(200).json({ success: true, data: results });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// BACKUP AND RESTORE
+// ==========================================
+
+export const exportBackup = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const data = {
+      Business: await prisma.business.findMany(),
+      User: await prisma.user.findMany(),
+      Expense: await prisma.expense.findMany(),
+      TechProject: await prisma.techProject.findMany(),
+      TechInvoice: await prisma.techInvoice.findMany(),
+      TechProjectMilestone: await prisma.techProjectMilestone.findMany(),
+      TechProposal: await prisma.techProposal.findMany(),
+      RePerson: await prisma.rePerson.findMany(),
+      ReDeal: await prisma.reDeal.findMany(),
+      ReCommissionRecord: await prisma.reCommissionRecord.findMany(),
+      RePeoplePayment: await prisma.rePeoplePayment.findMany(),
+      RePayout: await prisma.rePayout.findMany(),
+      ReProperty: await prisma.reProperty.findMany(),
+      ReActivity: await prisma.reActivity.findMany(),
+      TrainingCourse: await prisma.trainingCourse.findMany(),
+      TrainingBatch: await prisma.trainingBatch.findMany(),
+      TrainingStudent: await prisma.trainingStudent.findMany(),
+      TrainingStudyLog: await prisma.trainingStudyLog.findMany(),
+      TrainingFeeInstallment: await prisma.trainingFeeInstallment.findMany(),
+      TrainingAttendance: await prisma.trainingAttendance.findMany(),
+      CoachingStudent: await prisma.coachingStudent.findMany(),
+      CoachingAttendance: await prisma.coachingAttendance.findMany(),
+      CoachingFeeRecord: await prisma.coachingFeeRecord.findMany(),
+      ActivityLog: await prisma.activityLog.findMany(),
+    };
+
+    await logActivity(req.user?.userId || 'admin', 'Admin Panel', 'EXPORT', 'Exported full database backup');
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const importRestore = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const backup = req.body;
+    if (!backup || typeof backup !== 'object') {
+      return res.status(400).json({ success: false, message: 'Invalid backup payload' });
+    }
+
+    // Safety: Verify backup contains at least one admin user
+    const adminUser = backup.User?.find((u: any) => u.role === 'ADMIN');
+    if (!adminUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid backup: No ADMIN user found in backup file. Restore aborted for safety.'
+      });
+    }
+
+    // Wrap the entire restore in a transaction
+    // Important: we delete in an order that respects foreign keys (if any), then create.
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete all existing data
+      await tx.activityLog.deleteMany();
+      await tx.coachingFeeRecord.deleteMany();
+      await tx.coachingAttendance.deleteMany();
+      // CoachingEnrollment and Result if exist? (Checked schema earlier, there are CoachingEnrollments)
+      if (tx.coachingEnrollment) await tx.coachingEnrollment.deleteMany();
+      if (tx.coachingResult) await tx.coachingResult.deleteMany();
+      await tx.coachingStudent.deleteMany();
+
+      await tx.trainingAttendance.deleteMany();
+      await tx.trainingFeeInstallment.deleteMany();
+      await tx.trainingStudyLog.deleteMany();
+      await tx.trainingStudent.deleteMany();
+      await tx.trainingBatch.deleteMany();
+      await tx.trainingCourse.deleteMany();
+
+      await tx.reActivity.deleteMany();
+      await tx.reProperty.deleteMany();
+      await tx.rePayout.deleteMany();
+      await tx.rePeoplePayment.deleteMany();
+      await tx.reCommissionRecord.deleteMany();
+      await tx.reDeal.deleteMany();
+      await tx.rePerson.deleteMany();
+
+      await tx.techProposal.deleteMany();
+      await tx.techProjectMilestone.deleteMany();
+      await tx.techInvoice.deleteMany();
+      await tx.techProject.deleteMany();
+
+      await tx.expense.deleteMany();
+      await tx.user.deleteMany();
+      await tx.business.deleteMany();
+
+      // 2. Restore all data
+      if (backup.Business && backup.Business.length > 0) await tx.business.createMany({ data: backup.Business });
+      if (backup.User && backup.User.length > 0) await tx.user.createMany({ data: backup.User });
+      if (backup.Expense && backup.Expense.length > 0) await tx.expense.createMany({ data: backup.Expense });
+      
+      if (backup.TechProject && backup.TechProject.length > 0) await tx.techProject.createMany({ data: backup.TechProject });
+      if (backup.TechInvoice && backup.TechInvoice.length > 0) await tx.techInvoice.createMany({ data: backup.TechInvoice });
+      if (backup.TechProjectMilestone && backup.TechProjectMilestone.length > 0) await tx.techProjectMilestone.createMany({ data: backup.TechProjectMilestone });
+      if (backup.TechProposal && backup.TechProposal.length > 0) await tx.techProposal.createMany({ data: backup.TechProposal });
+
+      if (backup.RePerson && backup.RePerson.length > 0) await tx.rePerson.createMany({ data: backup.RePerson });
+      if (backup.ReDeal && backup.ReDeal.length > 0) await tx.reDeal.createMany({ data: backup.ReDeal });
+      if (backup.ReCommissionRecord && backup.ReCommissionRecord.length > 0) await tx.reCommissionRecord.createMany({ data: backup.ReCommissionRecord });
+      if (backup.RePeoplePayment && backup.RePeoplePayment.length > 0) await tx.rePeoplePayment.createMany({ data: backup.RePeoplePayment });
+      if (backup.RePayout && backup.RePayout.length > 0) await tx.rePayout.createMany({ data: backup.RePayout });
+      if (backup.ReProperty && backup.ReProperty.length > 0) await tx.reProperty.createMany({ data: backup.ReProperty });
+      if (backup.ReActivity && backup.ReActivity.length > 0) await tx.reActivity.createMany({ data: backup.ReActivity });
+
+      if (backup.TrainingCourse && backup.TrainingCourse.length > 0) await tx.trainingCourse.createMany({ data: backup.TrainingCourse });
+      if (backup.TrainingBatch && backup.TrainingBatch.length > 0) await tx.trainingBatch.createMany({ data: backup.TrainingBatch });
+      if (backup.TrainingStudent && backup.TrainingStudent.length > 0) await tx.trainingStudent.createMany({ data: backup.TrainingStudent });
+      if (backup.TrainingStudyLog && backup.TrainingStudyLog.length > 0) await tx.trainingStudyLog.createMany({ data: backup.TrainingStudyLog });
+      if (backup.TrainingFeeInstallment && backup.TrainingFeeInstallment.length > 0) await tx.trainingFeeInstallment.createMany({ data: backup.TrainingFeeInstallment });
+      if (backup.TrainingAttendance && backup.TrainingAttendance.length > 0) await tx.trainingAttendance.createMany({ data: backup.TrainingAttendance });
+
+      if (backup.CoachingStudent && backup.CoachingStudent.length > 0) await tx.coachingStudent.createMany({ data: backup.CoachingStudent });
+      // Restore CoachingEnrollment and Result if exist in payload (not explicitly gathered but good to have safety)
+      if (backup.CoachingEnrollment && backup.CoachingEnrollment.length > 0) await tx.coachingEnrollment.createMany({ data: backup.CoachingEnrollment });
+      if (backup.CoachingResult && backup.CoachingResult.length > 0) await tx.coachingResult.createMany({ data: backup.CoachingResult });
+      
+      if (backup.CoachingAttendance && backup.CoachingAttendance.length > 0) await tx.coachingAttendance.createMany({ data: backup.CoachingAttendance });
+      if (backup.CoachingFeeRecord && backup.CoachingFeeRecord.length > 0) await tx.coachingFeeRecord.createMany({ data: backup.CoachingFeeRecord });
+
+      if (backup.ActivityLog && backup.ActivityLog.length > 0) await tx.activityLog.createMany({ data: backup.ActivityLog });
+    });
+
+    await logActivity(req.user?.userId || 'admin', 'Admin Panel', 'IMPORT', 'Restored database from backup');
+    return res.status(200).json({ success: true, message: 'Database restored successfully' });
   } catch (error) {
     next(error);
   }

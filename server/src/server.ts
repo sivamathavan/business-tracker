@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -25,16 +26,42 @@ app.use(helmet({
   crossOriginResourcePolicy: false // Allow loading of external/local images if needed
 }));
 
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  'http://localhost:5176',
+  process.env.CLIENT_URL || 'https://business-tracker-xi.vercel.app'
+].filter(Boolean);
+
 app.use(cors({
-  origin: true, // Reflects the request origin, great for local dev
-  credentials: true, // Crucial for reading/writing httpOnly cookies
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, curl)
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: Origin ${origin} not allowed`));
+    }
+  },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+
+// Login rate limiter: max 10 attempts per 15 minutes per IP
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { success: false, message: 'Too many login attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/v1/auth/login', loginLimiter);
 
 // Logger middleware for debugging
 app.use((req, _res, next) => {

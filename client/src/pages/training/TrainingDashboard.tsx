@@ -5,7 +5,7 @@ import {
   Plus, Search, Edit2, Trash2, Calendar, FileText, 
   BarChart2, BookOpen, Clock, Tag, ExternalLink, GraduationCap, Users, ClipboardList, Check,
   Pin, User, DollarSign, Sparkles, Link, RefreshCw, FileSpreadsheet, 
-  FileDown, CheckCircle, Percent, AlertTriangle, PlayCircle, Wallet
+  FileDown, CheckCircle, Percent, AlertTriangle, PlayCircle, Wallet, CalendarDays
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RePie, Pie, Cell } from 'recharts';
 import apiClient from '../../api/apiClient';
@@ -92,6 +92,12 @@ export const TrainingDashboard: React.FC = () => {
   const [logs, setLogs] = useState<StudyLog[]>([]);
   const [fees, setFees] = useState<FeeInstallment[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
+
+  // Analytics Filter States
+  const [analyticsDateType, setAnalyticsDateType] = useState<'lifetime' | 'month' | 'range'>('lifetime');
+  const [analyticsMonthFilter, setAnalyticsMonthFilter] = useState('');
+  const [analyticsStartDate, setAnalyticsStartDate] = useState('');
+  const [analyticsEndDate, setAnalyticsEndDate] = useState('');
   
   // Attendance state
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
@@ -160,7 +166,13 @@ export const TrainingDashboard: React.FC = () => {
 
   const fetchAnalytics = async () => {
     try {
-      const res = await apiClient.get('/training/analytics');
+      const params: any = {};
+      if (analyticsDateType === 'month' && analyticsMonthFilter) params.month = analyticsMonthFilter;
+      if (analyticsDateType === 'range' && analyticsStartDate && analyticsEndDate) {
+        params.startDate = analyticsStartDate;
+        params.endDate = analyticsEndDate;
+      }
+      const res = await apiClient.get('/training/analytics', { params });
       if (res.data.success) {
         setAnalytics(res.data.analytics);
       }
@@ -203,6 +215,9 @@ export const TrainingDashboard: React.FC = () => {
     if (activeTab === 'skills' || activeTab === 'analytics') {
       fetchAnalytics();
     }
+  }, [activeTab, analyticsDateType, analyticsMonthFilter, analyticsStartDate, analyticsEndDate]);
+
+  useEffect(() => {
     if (activeTab === 'attendance') {
       fetchAttendance(attendanceDate);
     }
@@ -1051,6 +1066,49 @@ export const TrainingDashboard: React.FC = () => {
           ======================================================================= */}
       {activeTab === 'analytics' && analytics && (
         <div className="space-y-6">
+          {/* Analytics Filters */}
+          <div className="bg-brand-card/60 border border-brand-border/60 rounded-2xl p-4 flex flex-wrap gap-4 items-center shadow-sm">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-slate-500" />
+              <select
+                value={analyticsDateType}
+                onChange={(e) => setAnalyticsDateType(e.target.value as any)}
+                className="pl-3 pr-8 py-1.5 rounded-lg text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none focus:border-indigo-500"
+              >
+                <option value="lifetime">Lifetime</option>
+                <option value="month">Specific Month</option>
+                <option value="range">Custom Range</option>
+              </select>
+            </div>
+
+            {analyticsDateType === 'month' && (
+              <input
+                type="month"
+                value={analyticsMonthFilter}
+                onChange={(e) => setAnalyticsMonthFilter(e.target.value)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none focus:border-indigo-500"
+              />
+            )}
+
+            {analyticsDateType === 'range' && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={analyticsStartDate}
+                  onChange={(e) => setAnalyticsStartDate(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none focus:border-indigo-500"
+                />
+                <span className="text-slate-500 text-xs font-bold">TO</span>
+                <input
+                  type="date"
+                  value={analyticsEndDate}
+                  onChange={(e) => setAnalyticsEndDate(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* Monthly enrollment bar chart */}

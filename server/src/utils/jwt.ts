@@ -1,7 +1,11 @@
 import * as jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'rturox_super_secret_access_token_key_2026';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'rturox_super_secret_refresh_token_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+
+if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+  throw new Error('FATAL: JWT_SECRET and JWT_REFRESH_SECRET must be set in environment variables.');
+}
 
 export interface TokenPayload {
   id: string;

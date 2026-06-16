@@ -30,8 +30,8 @@ router.post(
   '/',
   [
     body('business_slug')
-      .isIn(['tech', 'realestate', 'training', 'coaching'])
-      .withMessage('Business slug must be one of: tech, realestate, training, coaching'),
+      .isIn(['tech', 'realestate', 'training', 'coaching', 'general'])
+      .withMessage('Business slug must be one of: tech, realestate, training, coaching, general'),
     body('category')
       .trim()
       .notEmpty()

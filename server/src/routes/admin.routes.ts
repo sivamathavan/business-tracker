@@ -9,7 +9,9 @@ import {
   toggleBusinessStatus,
   resetBusinessData,
   getActivityLogs,
-  getConsolidatedRevenueTrend
+  getConsolidatedRevenueTrend,
+  exportBackup,
+  importRestore
 } from '../controllers/admin.controller';
 import { requireAuth, requireAdmin } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -66,18 +68,20 @@ router.post(
   resetBusinessData
 );
 
-// --- Global Activity Logs ---
+// --- Database Backup & Restore ---
+router.get('/backup', exportBackup);
+router.post('/restore', importRestore);
+
+// --- Activity Logs ---
 router.get('/activity', getActivityLogs);
 
 // --- Consolidated financials ---
 router.get('/revenue', getConsolidatedRevenueTrend);
 
 
-// --- User Management ---
-router.get('/users', getUsers);
-router.post('/users', createUser);
-router.put('/users/:id', changeUserPasscode);
-router.delete('/users/:id', deleteUser);
+// --- Global Cross-Business Search ---
+import { globalSearch } from '../controllers/admin.controller';
+router.get('/search', globalSearch);
 
 export default router;
 

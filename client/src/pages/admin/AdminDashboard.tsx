@@ -13,6 +13,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import apiClient from '../../api/apiClient';
 import { RevenueHeroCard } from '../../components/ui/RevenueHeroCard';
 import { formatINR, formatDateStr } from '../../utils/formatters';
+import { TopBar } from '../../components/layout/TopBar';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { ExpensesTab } from '../../components/ui/ExpensesTab';
 
 // ==========================================
@@ -70,12 +72,7 @@ const EXPENSE_CATEGORIES = [
 
 const PAYMENT_MODES = ['Cash', 'UPI', 'Bank Transfer', 'Card'];
 
-const BUSINESS_OPTIONS = [
-  { slug: 'tech', label: 'Rturox Technology' },
-  { slug: 'realestate', label: 'DkProperties' },
-  { slug: 'training', label: 'RturoxAcademy' },
-  { slug: 'coaching', label: 'AchieversNest' }
-];
+import { BUSINESS_OPTIONS, getBizLabel } from '../../utils/constants';
 
 const CATEGORY_ICONS: Record<string, React.FC<any>> = {
   Petrol: Fuel,
@@ -109,7 +106,7 @@ const PIE_COLORS = ['#f97316', '#3b82f6', '#06b6d4', '#eab308', '#a855f7', '#22c
 
 export const AdminDashboard: React.FC = () => {
   // Admin tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'expenses'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'expenses' | 'backup'>('overview');
 
   // Overview data
   const [overview, setOverview] = useState<{ grandTotalRevenue: number; grandTotalPending: number; grandTotalExpenses: number; businessTiles: BusinessStats[] } | null>(null);
@@ -130,6 +127,7 @@ export const AdminDashboard: React.FC = () => {
   const [expenseSlugFilter, setExpenseSlugFilter] = useState('');
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('');
   const [expenseMonthFilter, setExpenseMonthFilter] = useState('');
+  const [expenseSpentByFilter, setExpenseSpentByFilter] = useState('');
   const [expenseSearch, setExpenseSearch] = useState('');
   const [expenseModal, setExpenseModal] = useState<{ open: boolean; editRecord: Expense | null }>({ open: false, editRecord: null });
 
@@ -139,6 +137,20 @@ export const AdminDashboard: React.FC = () => {
 
   // Forms
   const { register, handleSubmit, reset, setValue, watch } = useForm();
+  
+  // Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    danger?: boolean;
+    requireTyping?: string;
+    confirmText?: string;
+  }>({ open: false, title: '', message: '', onConfirm: () => {} });
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   useEffect(() => {
     if (globalSearch.length < 2) {
@@ -191,10 +203,11 @@ export const AdminDashboard: React.FC = () => {
       if (expenseSlugFilter) params.slug = expenseSlugFilter;
       if (expenseCategoryFilter) params.category = expenseCategoryFilter;
       if (expenseMonthFilter) params.month = expenseMonthFilter;
+      if (expenseSpentByFilter) params.spent_by = expenseSpentByFilter;
 
       const [listRes, summaryRes] = await Promise.all([
         apiClient.get('/expenses', { params }),
-        apiClient.get('/expenses/summary/all')
+        apiClient.get('/expenses/summary/all', { params })
       ]);
 
       if (listRes.data.success) setExpenses(listRes.data.data);
@@ -214,7 +227,7 @@ export const AdminDashboard: React.FC = () => {
     if (activeTab === 'expenses') {
       fetchExpenses();
     }
-  }, [activeTab, expenseSlugFilter, expenseCategoryFilter, expenseMonthFilter]);
+  }, [activeTab, expenseSlugFilter, expenseCategoryFilter, expenseMonthFilter, expenseSpentByFilter]);
 
   // --- OVERVIEW HANDLERS ---
 
@@ -233,20 +246,26 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleResetBusiness = async (slug: string) => {
-    if (!window.confirm(`Are you absolutely sure? This will wipe ALL database records belonging to ${slug.toUpperCase()}! This cannot be undone.`)) {
-      return;
-    }
-    
-    try {
-      const res = await apiClient.post('/admin/business/reset', { slug });
-      if (res.data.success) {
-        toast.success(res.data.message);
-        fetchData();
+  const handleResetData = async (slug: string) => {
+    setConfirmModal({
+      open: true,
+      title: 'Reset Business Data',
+      message: `Are you absolutely sure? This will wipe ALL database records belonging to ${slug.toUpperCase()}! This cannot be undone.`,
+      danger: true,
+      requireTyping: 'DELETE',
+      onConfirm: async () => {
+        setConfirmModal(m => ({ ...m, open: false }));
+        try {
+          const res = await apiClient.post('/admin/business/reset', { slug });
+          if (res.data.success) {
+            toast.success(res.data.message);
+            fetchData();
+          }
+        } catch (e) {
+          toast.error(`Failed to reset data for ${slug}`);
+        }
       }
-    } catch (e) {
-      toast.error('Database wipe command failed.');
-    }
+    });
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -288,26 +307,51 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleDeleteUser = async (id: string) => {
-    if (!window.confirm('Delete user profile? This user will lose dashboard session credentials.')) {
-      return;
-    }
-
-    try {
-      const res = await apiClient.delete(`/admin/users/${id}`);
-      if (res.data.success) {
-        toast.success(res.data.message);
-        fetchData();
+    setConfirmModal({
+      open: true,
+      title: 'Delete User Profile',
+      message: 'Delete user profile? This user will lose dashboard session credentials.',
+      danger: true,
+      onConfirm: async () => {
+        setConfirmModal(m => ({ ...m, open: false }));
+        try {
+          const res = await apiClient.delete(`/admin/users/${id}`);
+          if (res.data.success) {
+            toast.success(res.data.message);
+            fetchData();
+          }
+        } catch (e) {
+          toast.error('User profile deletion failed.');
+        }
       }
-    } catch (e) {
-      toast.error('User profile deletion failed.');
-    }
+    });
   };
 
   // --- EXPENSE HANDLERS ---
 
-  const handleExpenseSubmit = async (data: any) => {
+  const handleDeleteExpense = async (id: string) => {
+    setConfirmModal({
+      open: true,
+      title: 'Delete Expense',
+      message: 'Delete this expense record?',
+      danger: true,
+      onConfirm: async () => {
+        setConfirmModal(m => ({ ...m, open: false }));
+        try {
+          const res = await apiClient.delete(`/admin/expenses/${id}`);
+          if (res.data.success) {
+            toast.success('Expense deleted successfully.');
+            fetchExpenses();
+          }
+        } catch (e) {
+          toast.error('Failed to delete expense.');
+        }
+      }
+    });
+  };
+
+  const handleCreateExpense = async (data: any) => {
     try {
-      // Resolve the category — if custom category is typed, use it
       const finalCategory = showCustomCategory && customCategory.trim()
         ? customCategory.trim()
         : data.category;
@@ -337,24 +381,10 @@ export const AdminDashboard: React.FC = () => {
         setShowCustomCategory(false);
         reset();
         fetchExpenses();
-        fetchData(); // Refresh overview tiles too
+        fetchData();
       }
     } catch (e: any) {
       toast.error(e.response?.data?.message || 'Failed to save expense.');
-    }
-  };
-
-  const handleDeleteExpense = async (id: string) => {
-    if (!window.confirm('Delete this expense record?')) return;
-    try {
-      const res = await apiClient.delete(`/expenses/${id}`);
-      if (res.data.success) {
-        toast.success('Expense deleted.');
-        fetchExpenses();
-        fetchData();
-      }
-    } catch (e) {
-      toast.error('Failed to delete expense.');
     }
   };
 
@@ -375,25 +405,77 @@ export const AdminDashboard: React.FC = () => {
     setExpenseModal({ open: true, editRecord: exp });
   };
 
-  // --- FILTERED EXPENSES ---
-  const filteredExpenses = expenses.filter(exp => {
-    if (!expenseSearch) return true;
-    const q = expenseSearch.toLowerCase();
-    return (
-      exp.category.toLowerCase().includes(q) ||
-      (exp.description && exp.description.toLowerCase().includes(q)) ||
-      (exp.notes && exp.notes.toLowerCase().includes(q)) ||
-      exp.business_slug.toLowerCase().includes(q) ||
-      String(exp.amount).includes(q)
-    );
-  });
+  // --- BACKUP & RESTORE ---
+  const handleExportBackup = async () => {
+    try {
+      toast.loading('Generating backup...', { id: 'backup' });
+      const res = await apiClient.get('/admin/backup');
+      if (res.data.success) {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(res.data.data));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", `database_backup_${new Date().toISOString().split('T')[0]}.json`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+        toast.success('Backup downloaded successfully', { id: 'backup' });
+      }
+    } catch (e) {
+      toast.error('Failed to export backup', { id: 'backup' });
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!selectedFile) return;
+
+    setConfirmModal({
+      open: true,
+      title: 'Restore Database from Backup',
+      message: 'WARNING: Restoring from a backup will PERMANENTLY ERASE all current data and replace it with the backup. This action cannot be undone. Do you wish to proceed?',
+      danger: true,
+      requireTyping: 'RESTORE',
+      confirmText: 'Yes, Restore Database',
+      onConfirm: async () => {
+        setConfirmModal(m => ({ ...m, open: false }));
+        setIsRestoring(true);
+        const loadingToast = toast.loading('Reading backup file...');
+        try {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            try {
+              const content = e.target?.result as string;
+              const backupData = JSON.parse(content);
+              toast.loading('Restoring database. Please wait...', { id: loadingToast });
+              const res = await apiClient.post('/admin/restore', backupData);
+              if (res.data.success) {
+                toast.success('Database restored successfully!', { id: loadingToast });
+                setSelectedFile(null);
+                fetchData();
+              }
+            } catch (err) {
+              toast.error('Invalid backup file format.', { id: loadingToast });
+            } finally {
+              setIsRestoring(false);
+            }
+          };
+          reader.readAsText(selectedFile);
+        } catch (e) {
+          toast.error('Restore failed.', { id: loadingToast });
+          setIsRestoring(false);
+        }
+      }
+    });
+  };
 
   // --- LOADING STATE ---
   if (loading && !overview) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 gap-4">
-        <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-xs text-slate-500 font-bold tracking-wider">Syncing Admin Nodes...</p>
+      <div className="space-y-8 animate-in fade-in">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="h-36 rounded-2xl bg-slate-800/40 animate-pulse border border-brand-border/30" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -417,12 +499,6 @@ export const AdminDashboard: React.FC = () => {
     return null;
   };
 
-  // Get business label from slug
-  const getBizLabel = (slug: string) => BUSINESS_OPTIONS.find(b => b.slug === slug)?.label || slug;
-
-  // Get the category icon component
-  const getCategoryIcon = (cat: string) => CATEGORY_ICONS[cat] || MoreHorizontal;
-
   return (
     <div className="space-y-8 select-none">
       
@@ -431,7 +507,8 @@ export const AdminDashboard: React.FC = () => {
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           {[
             { key: 'overview', label: 'Operations Center', icon: BarChart2 },
-            { key: 'expenses', label: 'Expense Tracker', icon: Wallet }
+            { key: 'expenses', label: 'Expense Tracker', icon: Wallet },
+            { key: 'backup', label: 'Data Backup & Recovery', icon: Database }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -450,6 +527,30 @@ export const AdminDashboard: React.FC = () => {
             );
           })}
         </div>
+
+        {/* Global Search */}
+        <div className="relative ml-auto">
+          <input
+            type="text"
+            placeholder="Search clients, students, people..."
+            value={globalSearch}
+            onChange={(e) => setGlobalSearch(e.target.value)}
+            className="w-64 px-4 py-2 pl-9 rounded-xl text-xs bg-slate-900/60 border border-brand-border/60 focus:border-indigo-500/60 focus:outline-none text-slate-300 placeholder-slate-500"
+          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+          {/* Dropdown search results */}
+          {searchResults.length > 0 && (
+            <div className="absolute top-full mt-1 right-0 w-80 bg-[#12121a] border border-brand-border rounded-xl shadow-2xl z-50 overflow-hidden">
+              {searchResults.map(r => (
+                <div key={r.id} className="px-4 py-3 hover:bg-slate-800/40 border-b border-brand-border/30 last:border-0">
+                  <p className="text-xs font-bold text-slate-200">{r.name}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{r.business} · {r.context}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
         <button
           onClick={() => { fetchData(); if (activeTab === 'expenses') fetchExpenses(); }}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 transition-all duration-200"
@@ -623,7 +724,7 @@ export const AdminDashboard: React.FC = () => {
                     </span>
                     
                     <button
-                      onClick={() => handleResetBusiness(biz.slug)}
+                      onClick={() => handleResetData(biz.slug)}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-rose-500/10 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/20 transition-all duration-200"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -819,6 +920,64 @@ export const AdminDashboard: React.FC = () => {
           ============================================================ */}
       {activeTab === 'expenses' && (
         <ExpensesTab onSave={fetchData} />
+      )}
+
+      {/* ============================================================
+          TAB: BACKUP & RECOVERY
+          ============================================================ */}
+      {activeTab === 'backup' && (
+        <div className="space-y-6">
+          <div className="bg-[#12121a] border border-brand-border rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+              <Database className="w-48 h-48 text-indigo-500" />
+            </div>
+            
+            <div className="relative z-10 max-w-2xl">
+              <h2 className="text-2xl font-black text-slate-200 mb-2 font-heading tracking-tight">Data Backup & Recovery</h2>
+              <p className="text-slate-400 text-sm mb-8 leading-relaxed font-medium">
+                Export your entire database to a secure local file, or restore your system from a previous backup. Restoring will permanently replace all current data.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-[#1a1a24] border border-indigo-500/20 rounded-2xl p-6 shadow-inner hover:border-indigo-500/50 transition-colors">
+                  <div className="w-12 h-12 bg-indigo-500/10 rounded-xl flex items-center justify-center mb-4">
+                    <ArrowDownRight className="w-6 h-6 text-indigo-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-200 mb-2">Export Backup</h3>
+                  <p className="text-xs text-slate-400 mb-6">Download a complete snapshot of all business data, users, and logs.</p>
+                  <button
+                    onClick={handleExportBackup}
+                    className="w-full py-3 rounded-xl font-bold text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-lg shadow-indigo-900/20"
+                  >
+                    Download Database (.json)
+                  </button>
+                </div>
+
+                {/* Import Card */}
+                <div className="bg-[#1a1a24] border border-rose-500/20 rounded-2xl p-6 shadow-inner hover:border-rose-500/50 transition-colors">
+                  <div className="w-12 h-12 bg-rose-500/10 rounded-xl flex items-center justify-center mb-4">
+                    <ArrowUpRight className="w-6 h-6 text-rose-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-200 mb-2">Restore System</h3>
+                  <p className="text-xs text-rose-400/80 mb-6 font-medium">Warning: This will permanently erase current data and replace it.</p>
+                  
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={(e) => { if (e.target.files && e.target.files.length > 0) setSelectedFile(e.target.files[0]); }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <button className="w-full py-3 rounded-xl font-bold text-sm bg-rose-950/40 hover:bg-rose-900/60 border border-rose-900/50 text-rose-400 transition-all pointer-events-none">
+                      Select Backup File to Restore
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import { 
@@ -15,6 +15,7 @@ import { formatINR, formatDateStr } from '../../utils/formatters';
 interface Expense {
   id: string;
   business_slug: string;
+  expense_type: string;
   category: string;
   amount: number;
   spent_by: string | null;
@@ -42,7 +43,8 @@ const BUSINESS_OPTIONS = [
   { slug: 'tech', label: 'Rturox Technology' },
   { slug: 'realestate', label: 'DkProperties' },
   { slug: 'training', label: 'RturoxAcademy' },
-  { slug: 'coaching', label: 'AchieversNest' }
+  { slug: 'coaching', label: 'AchieversNest' },
+  { slug: 'general', label: 'General / All Businesses' }
 ];
 
 const CATEGORY_ICONS: Record<string, React.FC<any>> = {
@@ -97,6 +99,8 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
   const [expenseMonthFilter, setExpenseMonthFilter] = useState('');
   const [expenseStartDate, setExpenseStartDate] = useState('');
   const [expenseEndDate, setExpenseEndDate] = useState('');
+  const [expenseSpentByFilter, setExpenseSpentByFilter] = useState('');
+  const [expenseTypeFilter, setExpenseTypeFilter] = useState('');
 
   // Modal State
   const [expenseModal, setExpenseModal] = useState<{ open: boolean; editRecord: Expense | null }>({ open: false, editRecord: null });
@@ -116,6 +120,8 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
         params.startDate = expenseStartDate;
         params.endDate = expenseEndDate;
       }
+      if (expenseSpentByFilter) params.spent_by = expenseSpentByFilter;
+      if (expenseTypeFilter) params.type = expenseTypeFilter;
 
       const res = await apiClient.get('/expenses', { params });
       if (res.data.success) {
@@ -137,6 +143,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
         params.startDate = expenseStartDate;
         params.endDate = expenseEndDate;
       }
+      if (expenseSpentByFilter) params.spent_by = expenseSpentByFilter;
       
       const res = await apiClient.get('/expenses/summary/all', { params });
       if (res.data.success) {
@@ -149,11 +156,11 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
 
   useEffect(() => {
     fetchExpenses();
-  }, [expenseSlugFilter, expenseCategoryFilter, expenseDateType, expenseMonthFilter, expenseStartDate, expenseEndDate]);
+  }, [expenseSlugFilter, expenseCategoryFilter, expenseDateType, expenseMonthFilter, expenseStartDate, expenseEndDate, expenseSpentByFilter, expenseTypeFilter]);
 
   useEffect(() => {
     fetchSummary();
-  }, [expenseDateType, expenseMonthFilter, expenseStartDate, expenseEndDate]);
+  }, [expenseDateType, expenseMonthFilter, expenseStartDate, expenseEndDate, expenseSpentByFilter]);
 
   const handleExpenseSubmit = async (data: any) => {
     try {
@@ -217,6 +224,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
     
     reset({
       business_slug: exp.business_slug,
+      expense_type: exp.expense_type || 'EXPENSE',
       category: isCustom ? '' : exp.category,
       amount: Number(exp.amount),
       spent_by: exp.spent_by || '',
@@ -233,6 +241,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
     setCustomCategory('');
     reset({
       business_slug: activeSlug || '',
+      expense_type: 'EXPENSE',
       category: 'Petrol',
       amount: '',
       spent_by: '',
@@ -253,6 +262,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
       (exp.description && exp.description.toLowerCase().includes(q)) ||
       (exp.notes && exp.notes.toLowerCase().includes(q)) ||
       exp.business_slug.toLowerCase().includes(q) ||
+      (exp.spent_by && exp.spent_by.toLowerCase().includes(q)) ||
       String(exp.amount).includes(q)
     );
   });
@@ -261,7 +271,9 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
   const getCategoryIcon = (cat: string) => CATEGORY_ICONS[cat] || MoreHorizontal;
 
   // Scoped computations
-  const totalAmount = filteredExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+  const totalExpenses = filteredExpenses.reduce((sum, exp) => exp.expense_type === 'EXPENSE' ? sum + Number(exp.amount) : sum, 0);
+  const totalInvestments = filteredExpenses.reduce((sum, exp) => exp.expense_type === 'INVESTMENT' ? sum + Number(exp.amount) : sum, 0);
+  const totalDrawings = filteredExpenses.reduce((sum, exp) => exp.expense_type === 'DRAWING' ? sum + Number(exp.amount) : sum, 0);
 
   // Recharts local charts if scoped
   const scopedCategoryData = Object.entries(
@@ -270,6 +282,21 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
       return acc;
     }, {})
   ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+
+  const scopedSpentByData = Object.entries(
+    filteredExpenses.reduce((acc: Record<string, number>, exp) => {
+      const person = exp.spent_by ? exp.spent_by.trim() : 'Unknown';
+      acc[person] = (acc[person] || 0) + Number(exp.amount);
+      return acc;
+    }, {})
+  ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+
+  const displayCategoryData = summary?.categoryBreakdown || scopedCategoryData;
+
+  let adminSpentByData = summary?.spentByBreakdown || [];
+  if (expenseTypeFilter === 'INVESTMENT') adminSpentByData = summary?.investmentBreakdown || [];
+  if (expenseTypeFilter === 'DRAWING') adminSpentByData = summary?.drawingBreakdown || [];
+  const displaySpentByData = isScoped ? scopedSpentByData : adminSpentByData;
 
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const currentYear = new Date().getFullYear();
@@ -301,53 +328,72 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
     return null;
   };
 
+  // Derive unique names from existing data for spent_by suggestions
+  const uniqueSpentBy = useMemo(() =>
+    [...new Set(expenses.map(e => e.spent_by).filter(Boolean) as string[])].sort(),
+    [expenses]
+  );
+
   return (
     <div className="space-y-6">
       {/* Overview Card */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-brand-card border border-rose-500/20 rounded-3xl p-6 shadow-md">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl bg-rose-950/20 border border-rose-900/40 text-rose-400">
               <Wallet className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Active Expenses</p>
-              <p className="text-2xl font-black text-rose-400 font-heading">{formatINR(totalAmount)}</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Business Expenses</p>
+              <p className="text-2xl font-black text-rose-400 font-heading">{formatINR(totalExpenses)}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-brand-card border border-brand-border rounded-3xl p-6 shadow-md">
+        <div className="bg-brand-card border border-emerald-500/20 rounded-3xl p-6 shadow-md">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-indigo-950/20 border border-indigo-900/40 text-indigo-400">
+            <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-900/40 text-emerald-400">
+              <ArrowDownRight className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Capital Invested</p>
+              <p className="text-2xl font-black text-emerald-400 font-heading">{formatINR(totalInvestments)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-brand-card border border-amber-500/20 rounded-3xl p-6 shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-amber-950/20 border border-amber-900/40 text-amber-400">
               <Receipt className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Transactions</p>
-              <p className="text-2xl font-black text-slate-200 font-heading">{filteredExpenses.length}</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Personal Drawings</p>
+              <p className="text-2xl font-black text-amber-400 font-heading">{formatINR(totalDrawings)}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-brand-card border border-brand-border rounded-3xl p-6 flex items-center justify-between">
-          <div className="space-y-1">
-            <h4 className="text-xs font-bold text-slate-300">Track New Expense</h4>
-            <p className="text-[10px] text-slate-500 leading-tight">Log every ₹1 manually with categories.</p>
+        <div className="bg-brand-card border border-brand-border rounded-3xl p-6 flex flex-col items-start justify-center gap-2">
+          <div className="space-y-0.5">
+            <h4 className="text-xs font-bold text-slate-300">Track New Record</h4>
+            <p className="text-[9px] text-slate-500 leading-tight">Log expenses, investments or drawings.</p>
           </div>
           <button
             onClick={openAddModal}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all duration-200"
+            className="flex items-center gap-1.5 px-3 py-2 mt-1 rounded-xl text-xs font-bold bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 transition-all duration-200"
           >
             <Plus className="w-4 h-4" />
-            Log Expense
+            Log Entry
           </button>
         </div>
       </div>
 
       {/* Analytics Charts */}
       {filteredExpenses.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Scoped Category Breakdown */}
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Scoped Category Breakdown */}
           <div className="bg-brand-card border border-brand-border rounded-3xl p-6 shadow-md flex flex-col min-h-[320px]">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -359,7 +405,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
               <ResponsiveContainer width="100%" height="100%">
                 <RePie>
                   <Pie
-                    data={scopedCategoryData}
+                    data={displayCategoryData}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -367,7 +413,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
                     paddingAngle={3}
                     dataKey="value"
                   >
-                    {scopedCategoryData.map((entry, index) => (
+                    {displayCategoryData.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                     ))}
                   </Pie>
@@ -376,13 +422,52 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
               </ResponsiveContainer>
             </div>
             <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1.5 max-h-[80px] overflow-y-auto">
-              {scopedCategoryData.slice(0, 6).map((item, idx) => (
+              {displayCategoryData.slice(0, 6).map((item: any, idx: number) => (
                 <div key={item.name} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
                   <span>{item.name} ({formatINR(item.value)})</span>
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Spent By Breakdown */}
+          <div className="bg-brand-card border border-brand-border rounded-3xl p-6 shadow-md flex flex-col min-h-[320px]">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-emerald-400" />
+                <h4 className="text-xs font-black text-slate-200 uppercase tracking-wider font-heading">Spent By Share</h4>
+              </div>
+            </div>
+            <div className="flex-1 min-h-[220px] relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <RePie>
+                  <Pie
+                    data={displaySpentByData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {displaySpentByData.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[(index + 4) % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: any) => formatINR(value)} />
+                </RePie>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1.5 max-h-[80px] overflow-y-auto">
+              {displaySpentByData.slice(0, 6).map((item: any, idx: number) => (
+                <div key={item.name} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: PIE_COLORS[(idx + 4) % PIE_COLORS.length] }} />
+                  <span>{item.name} ({formatINR(item.value)})</span>
+                </div>
+              ))}
+            </div>
+          </div>
           </div>
 
           {/* Monthly Trend */}
@@ -453,6 +538,21 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
               </div>
             )}
 
+            {/* Type Filter */}
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+              <select
+                value={expenseTypeFilter}
+                onChange={(e) => setExpenseTypeFilter(e.target.value)}
+                className="pl-8 pr-4 py-2 rounded-xl text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none"
+              >
+                <option value="">All Types</option>
+                <option value="EXPENSE">Expense (Out)</option>
+                <option value="INVESTMENT">Investment (In)</option>
+                <option value="DRAWING">Drawing (Out)</option>
+              </select>
+            </div>
+
             {/* Category Filter */}
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
@@ -466,6 +566,18 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Spent By Filter */}
+            <div className="relative">
+              <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+              <input
+                type="text"
+                placeholder="Person Name..."
+                value={expenseSpentByFilter}
+                onChange={(e) => setExpenseSpentByFilter(e.target.value)}
+                className="w-36 pl-8 pr-4 py-2 rounded-xl text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 focus:outline-none focus:border-indigo-500 text-slate-200"
+              />
             </div>
 
             {/* Date Filter Type */}
@@ -549,7 +661,11 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
                   return (
                     <tr key={exp.id} className="hover:bg-brand-dark/20 transition-colors">
                       <td className="px-6 py-4 max-w-xs">
-                        <p className="font-bold text-slate-200 truncate">{exp.description || 'General Business Expense'}</p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-bold text-slate-200 truncate">{exp.description || 'General Business Expense'}</p>
+                          {exp.expense_type === 'INVESTMENT' && <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-emerald-950/40 text-emerald-400 border border-emerald-900/40">Invested</span>}
+                          {exp.expense_type === 'DRAWING' && <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-amber-950/40 text-amber-400 border border-amber-900/40">Drawing</span>}
+                        </div>
                         {exp.spent_by && <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wide">Spent by: <span className="text-slate-300 font-bold">{exp.spent_by}</span></p>}
                         <p className="text-[10px] text-slate-500 mt-0.5">{formatDateStr(exp.date)}</p>
                       </td>
@@ -567,8 +683,8 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
                       <td className="px-6 py-4 font-semibold text-slate-400">
                         {exp.payment_mode || 'UPI'}
                       </td>
-                      <td className="px-6 py-4 font-black text-rose-400 font-heading">
-                        {formatINR(exp.amount)}
+                      <td className={`px-6 py-4 font-black font-heading ${exp.expense_type === 'INVESTMENT' ? 'text-emerald-400' : exp.expense_type === 'DRAWING' ? 'text-amber-400' : 'text-rose-400'}`}>
+                        {exp.expense_type === 'INVESTMENT' ? '+' : '-'}{formatINR(exp.amount)}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -631,6 +747,25 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ businessSlug, onSave }
                   </select>
                 </div>
               )}
+
+              {/* Expense Type */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Transaction Type</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <label className="flex items-center justify-center gap-2 p-2 rounded-xl border border-brand-border/80 cursor-pointer hover:bg-slate-800/50 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-950/20">
+                    <input type="radio" value="EXPENSE" {...register('expense_type')} className="sr-only" />
+                    <span className="text-[10px] font-bold text-slate-300">Expense (Out)</span>
+                  </label>
+                  <label className="flex items-center justify-center gap-2 p-2 rounded-xl border border-brand-border/80 cursor-pointer hover:bg-slate-800/50 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-950/20">
+                    <input type="radio" value="INVESTMENT" {...register('expense_type')} className="sr-only" />
+                    <span className="text-[10px] font-bold text-slate-300">Investment (In)</span>
+                  </label>
+                  <label className="flex items-center justify-center gap-2 p-2 rounded-xl border border-brand-border/80 cursor-pointer hover:bg-slate-800/50 has-[:checked]:border-amber-500 has-[:checked]:bg-amber-950/20">
+                    <input type="radio" value="DRAWING" {...register('expense_type')} className="sr-only" />
+                    <span className="text-[10px] font-bold text-slate-300">Drawing (Out)</span>
+                  </label>
+                </div>
+              </div>
 
               {/* Category selector */}
               <div className="grid grid-cols-2 gap-4">

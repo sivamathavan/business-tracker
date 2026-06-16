@@ -40,30 +40,25 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  token: localStorage.getItem('access_token'),
+  token: null,
   user: JSON.parse(localStorage.getItem('user_profile') || 'null'),
-  isAuthenticated: !!localStorage.getItem('access_token'),
+  isAuthenticated: !!localStorage.getItem('user_profile'),
   theme: (localStorage.getItem('theme') as 'dark' | 'light') || 'dark',
   notifications: [],
   isLoading: false,
 
   setToken: (token) => {
-    if (token) {
-      localStorage.setItem('access_token', token);
-      set({ token, isAuthenticated: true });
-    } else {
-      localStorage.removeItem('access_token');
-      set({ token: null, isAuthenticated: false });
-    }
+    // Only update state. Token is managed via httpOnly cookie by the server.
+    set({ token, isAuthenticated: !!token });
   },
 
   setUser: (user) => {
     if (user) {
       localStorage.setItem('user_profile', JSON.stringify(user));
-      set({ user });
+      set({ user, isAuthenticated: true });
     } else {
       localStorage.removeItem('user_profile');
-      set({ user: null });
+      set({ user: null, isAuthenticated: false });
     }
   },
 
@@ -100,19 +95,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (e) {
       console.error('Logout error on server:', e);
     } finally {
-      localStorage.removeItem('access_token');
       localStorage.removeItem('user_profile');
       set({ token: null, user: null, isAuthenticated: false, notifications: [] });
     }
   },
 
   checkSession: async () => {
-    const token = get().token;
-    if (!token) return;
     set({ isLoading: true });
     try {
       const response = await axios.get(`${API_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
         withCredentials: true
       });
       if (response.data.success) {

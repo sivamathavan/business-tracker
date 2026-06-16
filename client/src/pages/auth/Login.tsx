@@ -12,21 +12,18 @@ interface LoginFormInput {
   userId: string;
   passcode: string;
   businessSlug: string;
-  isAdmin: boolean;
 }
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const { setToken, setUser, isAuthenticated, user } = useAuthStore();
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<LoginFormInput>({
     defaultValues: {
       userId: '',
       passcode: '',
-      businessSlug: 'tech',
-      isAdmin: false
+      businessSlug: 'tech'
     }
   });
 
@@ -37,17 +34,6 @@ export const Login: React.FC = () => {
     }
   }, [isAuthenticated, user, navigate]);
 
-  // Sync admin checkbox with input variables
-  const handleAdminToggle = (checked: boolean) => {
-    setIsAdmin(checked);
-    setValue('isAdmin', checked);
-    if (checked) {
-      setValue('businessSlug', 'admin');
-    } else {
-      setValue('businessSlug', 'tech');
-    }
-  };
-
   const onSubmit = async (data: LoginFormInput) => {
     setIsLoading(true);
     const loadingToast = toast.loading('Verifying credentials...');
@@ -56,13 +42,11 @@ export const Login: React.FC = () => {
       const response = await axios.post(`${API_URL}/auth/login`, {
         userId: data.userId,
         passcode: data.passcode,
-        businessSlug: data.isAdmin ? 'admin' : data.businessSlug,
-        isAdmin: data.isAdmin
+        businessSlug: data.businessSlug
       }, { withCredentials: true });
 
       if (response.data.success) {
         toast.success('Login successful! Redirecting...', { id: loadingToast });
-        setToken(response.data.accessToken);
         setUser(response.data.user);
         
         // Dynamic redirect to correct pipeline
@@ -105,50 +89,28 @@ export const Login: React.FC = () => {
         {/* Form Container */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 mt-8">
           
-          {/* Admin Mode Toggler */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 border border-brand-border/30">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className={`w-5 h-5 ${isAdmin ? 'text-indigo-400' : 'text-slate-500'}`} />
-              <div>
-                <p className="text-xs font-bold text-slate-200">System Admin Portal</p>
-                <p className="text-[9px] text-slate-500 font-medium">Bypasses business restrictions</p>
-              </div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isAdmin}
-                onChange={(e) => handleAdminToggle(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 peer-checked:after:bg-white"></div>
+          {/* Business Selector */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
+              Select Business Tenant
             </label>
-          </div>
-
-          {/* Business Selector (only shown if regular user login) */}
-          {!isAdmin && (
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
-                Select Business Tenant
-              </label>
-              <div className="relative">
-                <select
-                  {...register('businessSlug')}
-                  className="w-full pl-3 pr-10 py-2.5 bg-slate-900 border border-brand-border/60 focus:border-brand-tech rounded-xl text-xs text-slate-200 font-semibold focus:outline-none transition-all duration-200 appearance-none"
-                >
-                  <option value="tech">💻 Business 1 — Rturox Technology</option>
-                  <option value="realestate">🏠 Business 2 — DkProperties</option>
-                  <option value="training">🎓 Business 3 — RturoxAcademy</option>
-                  <option value="coaching">🌟 Business 4 — AchieversNest</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                  <svg className="fill-current h-4 w-4" viewBox="0 0 20 20">
-                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                  </svg>
-                </div>
+            <div className="relative">
+              <select
+                {...register('businessSlug')}
+                className="w-full pl-3 pr-10 py-2.5 bg-slate-900 border border-brand-border/60 focus:border-brand-tech rounded-xl text-xs text-slate-200 font-semibold focus:outline-none transition-all duration-200 appearance-none"
+              >
+                <option value="tech">💻 Business 1 — Rturox Technology</option>
+                <option value="realestate">🏠 Business 2 — DkProperties</option>
+                <option value="training">🎓 Business 3 — RturoxAcademy</option>
+                <option value="coaching">🌟 Business 4 — AchieversNest</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                <svg className="fill-current h-4 w-4" viewBox="0 0 20 20">
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                </svg>
               </div>
             </div>
-          )}
+          </div>
 
           {/* User ID Field */}
           <div className="space-y-1.5">
@@ -196,11 +158,7 @@ export const Login: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-gradient-to-r ${
-              isAdmin 
-                ? 'from-indigo-600 via-[#8c43ff] to-rose-500 hover:shadow-[0_0_20px_rgba(108,99,255,0.4)]' 
-                : 'from-brand-tech to-[#8b5cf6] hover:shadow-[0_0_20px_rgba(108,99,255,0.3)]'
-            } transition-all duration-300 font-heading focus:outline-none flex items-center justify-center disabled:opacity-50`}
+            className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-gradient-to-r from-brand-tech to-[#8b5cf6] hover:shadow-[0_0_20px_rgba(108,99,255,0.3)] transition-all duration-300 font-heading focus:outline-none flex items-center justify-center disabled:opacity-50`}
           >
             {isLoading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

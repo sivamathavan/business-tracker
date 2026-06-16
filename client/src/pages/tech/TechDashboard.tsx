@@ -87,6 +87,12 @@ export const TechDashboard: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
+  // Analytics Filter States
+  const [analyticsDateType, setAnalyticsDateType] = useState<'lifetime' | 'month' | 'range'>('lifetime');
+  const [analyticsMonthFilter, setAnalyticsMonthFilter] = useState('');
+  const [analyticsStartDate, setAnalyticsStartDate] = useState('');
+  const [analyticsEndDate, setAnalyticsEndDate] = useState('');
+
   // Visual View states
   const [proposalView, setProposalView] = useState<'kanban' | 'table'>('kanban');
 
@@ -101,17 +107,15 @@ export const TechDashboard: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [projRes, invRes, propRes, anaRes] = await Promise.all([
+      const [projRes, invRes, propRes] = await Promise.all([
         apiClient.get('/tech/projects'),
         apiClient.get('/tech/invoices'),
-        apiClient.get('/tech/proposals'),
-        apiClient.get('/tech/analytics')
+        apiClient.get('/tech/proposals')
       ]);
 
       if (projRes.data.success) setProjects(projRes.data.data);
       if (invRes.data.success) setInvoices(invRes.data.data);
       if (propRes.data.success) setProposals(propRes.data.data);
-      if (anaRes.data.success) setAnalytics(anaRes.data.analytics);
 
       // Check for overdue alerts dynamically and push them to the notifications state in authStore
       const overdueProj = projRes.data.data.filter((p: Project) => {
@@ -136,9 +140,28 @@ export const TechDashboard: React.FC = () => {
     }
   };
 
+  const fetchAnalytics = async () => {
+    try {
+      const params: any = {};
+      if (analyticsDateType === 'month' && analyticsMonthFilter) params.month = analyticsMonthFilter;
+      if (analyticsDateType === 'range' && analyticsStartDate && analyticsEndDate) {
+        params.startDate = analyticsStartDate;
+        params.endDate = analyticsEndDate;
+      }
+      const anaRes = await apiClient.get('/tech/analytics', { params });
+      if (anaRes.data.success) setAnalytics(anaRes.data.analytics);
+    } catch (e) {
+      console.error('Failed to sync tech analytics.', e);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [analyticsDateType, analyticsMonthFilter, analyticsStartDate, analyticsEndDate]);
 
   useEffect(() => {
     if (activeTab === 'milestones' && selectedProjectId) {
@@ -1076,6 +1099,49 @@ export const TechDashboard: React.FC = () => {
           ======================================================================= */}
       {activeTab === 'analytics' && analytics && (
         <div className="space-y-6">
+          {/* Analytics Filters */}
+          <div className="bg-brand-card/60 border border-brand-border/60 rounded-2xl p-4 flex flex-wrap gap-4 items-center shadow-sm">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-slate-500" />
+              <select
+                value={analyticsDateType}
+                onChange={(e) => setAnalyticsDateType(e.target.value as any)}
+                className="pl-3 pr-8 py-1.5 rounded-lg text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none focus:border-indigo-500"
+              >
+                <option value="lifetime">Lifetime</option>
+                <option value="month">Specific Month</option>
+                <option value="range">Custom Range</option>
+              </select>
+            </div>
+
+            {analyticsDateType === 'month' && (
+              <input
+                type="month"
+                value={analyticsMonthFilter}
+                onChange={(e) => setAnalyticsMonthFilter(e.target.value)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none focus:border-indigo-500"
+              />
+            )}
+
+            {analyticsDateType === 'range' && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={analyticsStartDate}
+                  onChange={(e) => setAnalyticsStartDate(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none focus:border-indigo-500"
+                />
+                <span className="text-slate-500 text-xs font-bold">TO</span>
+                <input
+                  type="date"
+                  value={analyticsEndDate}
+                  onChange={(e) => setAnalyticsEndDate(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* Monthly collection bar chart */}

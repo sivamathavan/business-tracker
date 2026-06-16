@@ -409,12 +409,33 @@ export const deleteStudyLog = async (req: AuthenticatedRequest, res: Response, n
 
 export const getTrainingAnalytics = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const [courses, students, studyLogs, fees] = await Promise.all([
+    const [courses, students, studyLogs, allFees] = await Promise.all([
       prisma.trainingCourse.findMany({ where: { deleted_at: null }, select: { skill_tags: true, is_pinned: true } }),
       prisma.trainingStudent.findMany({ where: { deleted_at: null }, select: { student_id: true, total_fee: true, course_enrolled: true, batch_name: true, status: true, enrollment_date: true } }),
       prisma.trainingStudyLog.findMany({ where: { deleted_at: null }, select: { log_date: true, hours_studied: true } }),
       prisma.trainingFeeInstallment.findMany({ where: { deleted_at: null }, select: { student_id: true, status: true, amount: true, date: true } })
     ]);
+
+    const { month, startDate, endDate } = req.query;
+    let filterStart: Date | null = null;
+    let filterEnd: Date | null = null;
+    
+    if (startDate && endDate) {
+      filterStart = new Date(startDate as string);
+      filterEnd = new Date(new Date(endDate as string).getTime() + 24 * 60 * 60 * 1000);
+    } else if (month && typeof month === 'string') {
+      const [year, mon] = month.split('-').map(Number);
+      if (year && mon) {
+        filterStart = new Date(year, mon - 1, 1);
+        filterEnd = new Date(year, mon, 1);
+      }
+    }
+
+    const isWithinFilter = (d: Date | string | null | undefined) => {
+      if (!filterStart || !filterEnd || !d) return true;
+      const date = new Date(d);
+      return date >= filterStart && date < filterEnd;
+    };
 
     // 1. Dynamic Skills Cloud
     const tagCount: Record<string, number> = {};
@@ -433,10 +454,7 @@ export const getTrainingAnalytics = async (req: AuthenticatedRequest, res: Respo
       value: count, // Count determines visual tag sizing
     }));
 
-    // 2. Fee analytics (Expected vs Collected)
     let totalExpected = 0;
-    
-    // We already fetched fees concurrently above
     let totalCollected = 0;
     let totalPending = 0;
 
@@ -444,19 +462,24 @@ export const getTrainingAnalytics = async (req: AuthenticatedRequest, res: Respo
     const batchRevenue: Record<string, number> = {};
 
     students.forEach(s => {
-      const sFees = fees.filter(f => f.student_id === s.student_id && f.status === 'Paid');
-      const paid = sFees.reduce((sum, f) => sum + Number(f.amount), 0);
+      const sFees = allFees.filter(f => f.student_id === s.student_id && f.status === 'Paid');
+      const lifetimePaid = sFees.reduce((sum, f) => sum + Number(f.amount), 0);
       const expected = Number(s.total_fee || 0);
       
       totalExpected += expected;
-      totalCollected += paid;
-      totalPending += Math.max(0, expected - paid);
+      totalPending += Math.max(0, expected - lifetimePaid);
 
-      if (s.course_enrolled) {
-        courseRevenue[s.course_enrolled] = (courseRevenue[s.course_enrolled] || 0) + paid;
+      const filteredPaid = sFees
+        .filter(f => isWithinFilter(f.date))
+        .reduce((sum, f) => sum + Number(f.amount), 0);
+
+      totalCollected += filteredPaid;
+
+      if (s.course_enrolled && filteredPaid > 0) {
+        courseRevenue[s.course_enrolled] = (courseRevenue[s.course_enrolled] || 0) + filteredPaid;
       }
-      if (s.batch_name) {
-        batchRevenue[s.batch_name] = (batchRevenue[s.batch_name] || 0) + paid;
+      if (s.batch_name && filteredPaid > 0) {
+        batchRevenue[s.batch_name] = (batchRevenue[s.batch_name] || 0) + filteredPaid;
       }
     });
 
@@ -489,7 +512,6 @@ export const getTrainingAnalytics = async (req: AuthenticatedRequest, res: Respo
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const currentYear = new Date().getFullYear();
 
-    const allFees = fees;
     const monthlyTrend = months.map((m, idx) => {
       const monthFees = allFees.filter(f => {
         if (!f.date || f.status !== 'Paid') return false;

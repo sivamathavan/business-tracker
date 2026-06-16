@@ -821,13 +821,34 @@ export const getCoachingAnalytics = async (req: AuthenticatedRequest, res: Respo
       }),
       prisma.coachingFeeRecord.findMany({
         where: { deleted_at: null },
-        select: { student_id: true, month_year: true, fee_amount: true, status: true }
+        select: { student_id: true, month_year: true, fee_amount: true, status: true, paid_date: true }
       }),
       prisma.coachingStaff.findMany({
         where: { status: 'Active', deleted_at: null },
         select: { monthly_salary: true }
       })
     ]);
+
+    const { month, startDate, endDate } = req.query;
+    let filterStart: Date | null = null;
+    let filterEnd: Date | null = null;
+    
+    if (startDate && endDate) {
+      filterStart = new Date(startDate as string);
+      filterEnd = new Date(new Date(endDate as string).getTime() + 24 * 60 * 60 * 1000);
+    } else if (month && typeof month === 'string') {
+      const [year, mon] = month.split('-').map(Number);
+      if (year && mon) {
+        filterStart = new Date(year, mon - 1, 1);
+        filterEnd = new Date(year, mon, 1);
+      }
+    }
+
+    const isWithinFilter = (d: Date | string | null | undefined) => {
+      if (!filterStart || !filterEnd || !d) return true;
+      const date = new Date(d);
+      return date >= filterStart && date < filterEnd;
+    };
 
     // 1. Total monthly expected = sum(active students * their monthly fee)
     const totalExpectedThisMonth = activeStudents.reduce((sum, s) => sum + Number(s.monthly_fee), 0);
@@ -852,13 +873,17 @@ export const getCoachingAnalytics = async (req: AuthenticatedRequest, res: Respo
       .reduce((sum, r) => sum + Number(r.fee_amount), 0);
 
     // All-time for consistency with Admin
-    const totalCollected = feeRecords.filter(r => r.status === 'Paid').reduce((sum, r) => sum + Number(r.fee_amount), 0);
+    const filteredFees = feeRecords.filter(r => isWithinFilter(r.paid_date));
+    const totalCollected = filteredFees.filter(r => r.status === 'Paid').reduce((sum, r) => sum + Number(r.fee_amount), 0);
+    
+    // Pending shouldn't be fully bound by date filter if it's "still owed" globally, 
+    // but we can just use the global total pending for the snapshot.
     const totalPending = feeRecords.filter(r => r.status === 'Pending' || r.status === 'Overdue').reduce((sum, r) => sum + Number(r.fee_amount), 0);
 
     // 3. Standard wise revenue breakdown
     const standardRevenue: Record<string, number> = {};
     activeStudents.forEach(s => {
-      const studentPaidRecords = feeRecords.filter(r => r.student_id === s.student_id && r.status === 'Paid');
+      const studentPaidRecords = filteredFees.filter(r => r.student_id === s.student_id && r.status === 'Paid');
       const paidSum = studentPaidRecords.reduce((sum, r) => sum + Number(r.fee_amount), 0);
       standardRevenue[s.standard] = (standardRevenue[s.standard] || 0) + paidSum;
     });

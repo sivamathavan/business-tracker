@@ -84,18 +84,20 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
-    // 6. Set httpOnly cookies
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // 6. Set secure httpOnly cookies
     res.cookie('access_token', accessToken, {
       httpOnly: true,
-      secure: false, // set to true in production
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 8 * 60 * 60 * 1000, // 8 hours
     });
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -176,18 +178,19 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
       businessSlug: user.business?.slug || 'admin',
     };
 
-    const accessToken = generateAccessToken(newPayload);
+    const newAccessToken = generateAccessToken(newPayload);
 
-    res.cookie('access_token', accessToken, {
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.cookie('access_token', newAccessToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 8 * 60 * 60 * 1000,
     });
 
     return res.status(200).json({
       success: true,
-      accessToken,
+      accessToken: newAccessToken,
     });
   } catch (error) {
     return res.status(401).json({

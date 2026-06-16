@@ -8,10 +8,11 @@ const BUSINESS_LABELS: Record<string, string> = {
   tech: 'Rturox Technology',
   realestate: 'DkProperties',
   training: 'RturoxAcademy',
-  coaching: 'AchieversNest'
+  coaching: 'AchieversNest',
+  general: 'General / All Businesses'
 };
 
-const VALID_SLUGS = ['tech', 'realestate', 'training', 'coaching'];
+const VALID_SLUGS = ['tech', 'realestate', 'training', 'coaching', 'general'];
 
 // ==========================================
 // GET ALL EXPENSES (filtered by slug, optional month)
@@ -52,6 +53,16 @@ export const getExpenses = async (req: AuthenticatedRequest, res: Response, next
     // Optional category filter
     if (category && typeof category === 'string') {
       where.category = category;
+    }
+
+    // Optional spent_by filter
+    if (req.query.spent_by && typeof req.query.spent_by === 'string') {
+      where.spent_by = { contains: req.query.spent_by, mode: 'insensitive' };
+    }
+
+    // Optional type filter
+    if (req.query.type && typeof req.query.type === 'string') {
+      where.expense_type = req.query.type;
     }
 
     const expenses = await prisma.expense.findMany({
@@ -95,7 +106,7 @@ export const getExpenseById = async (req: AuthenticatedRequest, res: Response, n
 
 export const createExpense = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const { business_slug, category, amount, spent_by, description, date, payment_mode, notes } = req.body;
+    const { business_slug, expense_type, category, amount, spent_by, description, date, payment_mode, notes } = req.body;
 
     // Non-admin users can only add expenses for their own business
     if (req.user?.role !== 'ADMIN' && business_slug !== req.user?.businessSlug) {
@@ -105,6 +116,7 @@ export const createExpense = async (req: AuthenticatedRequest, res: Response, ne
     const expense = await prisma.expense.create({
       data: {
         business_slug,
+        expense_type: expense_type || 'EXPENSE',
         category,
         amount: Number(amount || 0),
         spent_by: spent_by || null,
@@ -137,7 +149,7 @@ export const createExpense = async (req: AuthenticatedRequest, res: Response, ne
 export const updateExpense = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { business_slug, category, amount, spent_by, description, date, payment_mode, notes } = req.body;
+    const { business_slug, expense_type, category, amount, spent_by, description, date, payment_mode, notes } = req.body;
 
     const existing = await prisma.expense.findUnique({ where: { id } });
     if (!existing || existing.deleted_at) {
@@ -153,6 +165,7 @@ export const updateExpense = async (req: AuthenticatedRequest, res: Response, ne
       where: { id },
       data: {
         business_slug: business_slug !== undefined ? business_slug : existing.business_slug,
+        expense_type: expense_type !== undefined ? expense_type : existing.expense_type,
         category: category !== undefined ? category : existing.category,
         amount: amount !== undefined ? Number(amount) : existing.amount,
         spent_by: spent_by !== undefined ? spent_by : existing.spent_by,
@@ -239,6 +252,11 @@ export const getExpenseSummary = async (req: AuthenticatedRequest, res: Response
       }
     }
 
+    // Optional spent_by filter
+    if (req.query.spent_by && typeof req.query.spent_by === 'string') {
+      where.spent_by = { contains: req.query.spent_by, mode: 'insensitive' };
+    }
+
     const expenses = await prisma.expense.findMany({ where });
 
     // Per-business totals
@@ -247,6 +265,11 @@ export const getExpenseSummary = async (req: AuthenticatedRequest, res: Response
 
     // Per-category totals
     const categoryTotals: Record<string, number> = {};
+
+    // Per-person totals for different types
+    const spentByExpenses: Record<string, number> = {};
+    const spentByInvestments: Record<string, number> = {};
+    const spentByDrawings: Record<string, number> = {};
 
     // Monthly trend (current year)
     const currentYear = new Date().getFullYear();
@@ -258,25 +281,39 @@ export const getExpenseSummary = async (req: AuthenticatedRequest, res: Response
     });
 
     let grandTotal = 0;
+    let grandTotalInvestments = 0;
+    let grandTotalDrawings = 0;
 
     expenses.forEach(exp => {
       const amt = Number(exp.amount || 0);
-      grandTotal += amt;
+      const person = exp.spent_by ? exp.spent_by.trim() : 'Unknown';
 
-      // Business totals
-      if (businessTotals[exp.business_slug] !== undefined) {
-        businessTotals[exp.business_slug] += amt;
-      }
+      if (exp.expense_type === 'INVESTMENT') {
+        grandTotalInvestments += amt;
+        spentByInvestments[person] = (spentByInvestments[person] || 0) + amt;
+      } else if (exp.expense_type === 'DRAWING') {
+        grandTotalDrawings += amt;
+        spentByDrawings[person] = (spentByDrawings[person] || 0) + amt;
+      } else {
+        // Normal EXPENSE
+        grandTotal += amt;
+        spentByExpenses[person] = (spentByExpenses[person] || 0) + amt;
 
-      // Category totals
-      categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + amt;
+        // Business totals
+        if (businessTotals[exp.business_slug] !== undefined) {
+          businessTotals[exp.business_slug] += amt;
+        }
 
-      // Monthly trend
-      const d = new Date(exp.date);
-      if (d.getFullYear() === currentYear) {
-        const mName = monthNames[d.getMonth()];
-        if (monthlyTrend[mName] && monthlyTrend[mName][exp.business_slug] !== undefined) {
-          monthlyTrend[mName][exp.business_slug] += amt;
+        // Category totals
+        categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + amt;
+
+        // Monthly trend
+        const d = new Date(exp.date);
+        if (d.getFullYear() === currentYear) {
+          const mName = monthNames[d.getMonth()];
+          if (monthlyTrend[mName] && monthlyTrend[mName][exp.business_slug] !== undefined) {
+            monthlyTrend[mName][exp.business_slug] += amt;
+          }
         }
       }
     });
@@ -286,21 +323,40 @@ export const getExpenseSummary = async (req: AuthenticatedRequest, res: Response
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
 
+    // Format spentBy breakdowns
+    const spentByBreakdown = Object.entries(spentByExpenses)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+    
+    const investmentBreakdown = Object.entries(spentByInvestments)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    const drawingBreakdown = Object.entries(spentByDrawings)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
     // Format monthly trend for bar chart
     const monthlyData = monthNames.map(m => ({
       name: m,
       'Rturox Technology': monthlyTrend[m].tech || 0,
       'DkProperties': monthlyTrend[m].realestate || 0,
       'RturoxAcademy': monthlyTrend[m].training || 0,
-      'AchieversNest': monthlyTrend[m].coaching || 0
+      'AchieversNest': monthlyTrend[m].coaching || 0,
+      'General': monthlyTrend[m].general || 0
     }));
 
     return res.status(200).json({
       success: true,
       data: {
         grandTotal,
+        grandTotalInvestments,
+        grandTotalDrawings,
         businessTotals,
         categoryBreakdown,
+        spentByBreakdown,
+        investmentBreakdown,
+        drawingBreakdown,
         monthlyData
       }
     });

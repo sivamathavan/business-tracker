@@ -11,7 +11,7 @@ import { ReMatchTab } from './ReMatchTab';
 import { ExpensesTab } from '../../components/ui/ExpensesTab';
 import { RevenueHeroCard } from '../../components/ui/RevenueHeroCard';
 import { 
-  Home, Users, Handshake, Building2, Landmark, BarChart2, Wallet, Zap
+  Home, Users, Handshake, Building2, Landmark, BarChart2, Wallet, Zap, CalendarDays
 } from 'lucide-react';
 
 const TABS_WITH_ICONS = [
@@ -30,9 +30,58 @@ export default function ReDashboard() {
 
   const data = useReData();
 
+  // Analytics Filter States
+  const [analyticsDateType, setAnalyticsDateType] = useState<'lifetime' | 'month' | 'range'>('lifetime');
+  const [analyticsMonthFilter, setAnalyticsMonthFilter] = useState('');
+  const [analyticsStartDate, setAnalyticsStartDate] = useState('');
+  const [analyticsEndDate, setAnalyticsEndDate] = useState('');
+
+  // Fetch filtered analytics
+  React.useEffect(() => {
+    if (activeTab === 'analytics' || activeTab === 'overview') {
+      const params: any = {};
+      if (analyticsDateType === 'month' && analyticsMonthFilter) params.month = analyticsMonthFilter;
+      if (analyticsDateType === 'range' && analyticsStartDate && analyticsEndDate) {
+        params.startDate = analyticsStartDate;
+        params.endDate = analyticsEndDate;
+      }
+      data.fetchAnalytics(params);
+    }
+  }, [activeTab, analyticsDateType, analyticsMonthFilter, analyticsStartDate, analyticsEndDate]);
+
   // Activity logger shorthand
   const re_logAct = (action: string, entity: string, id: string) =>
     re_logActivity(data.activities, data.setActivities, action, entity, id);
+
+  // Filter lists for ReAnalyticsTab based on date
+  const filterListByDate = (list: any[]) => {
+    if (analyticsDateType === 'lifetime') return list;
+    
+    let start: Date | null = null;
+    let end: Date | null = null;
+    
+    if (analyticsDateType === 'month' && analyticsMonthFilter) {
+      const [year, mon] = analyticsMonthFilter.split('-').map(Number);
+      if (year && mon) {
+        start = new Date(year, mon - 1, 1);
+        end = new Date(year, mon, 1);
+      }
+    } else if (analyticsDateType === 'range' && analyticsStartDate && analyticsEndDate) {
+      start = new Date(analyticsStartDate);
+      end = new Date(new Date(analyticsEndDate).getTime() + 24 * 60 * 60 * 1000);
+    }
+
+    if (!start || !end) return list;
+    
+    return list.filter(item => {
+      const d = item.created_at ? new Date(item.created_at) : null;
+      if (!d) return true;
+      return d >= start! && d < end!;
+    });
+  };
+
+  const filteredDeals = filterListByDate(data.deals);
+  const filteredCommissions = filterListByDate(data.commissions);
 
   return (
     <div id="re-dashboard" className="space-y-6">
@@ -124,12 +173,57 @@ export default function ReDashboard() {
       )}
 
       {activeTab === 'analytics' && (
-        <ReAnalyticsTab
-          people={data.people}
-          deals={data.deals}
-          properties={data.properties}
-          commissions={data.commissions}
-        />
+        <div className="space-y-6">
+          {/* Analytics Filters */}
+          <div className="bg-brand-card/60 border border-brand-border/60 rounded-2xl p-4 flex flex-wrap gap-4 items-center shadow-sm">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-slate-500" />
+              <select
+                value={analyticsDateType}
+                onChange={(e) => setAnalyticsDateType(e.target.value as any)}
+                className="pl-3 pr-8 py-1.5 rounded-lg text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none focus:border-indigo-500"
+              >
+                <option value="lifetime">Lifetime</option>
+                <option value="month">Specific Month</option>
+                <option value="range">Custom Range</option>
+              </select>
+            </div>
+
+            {analyticsDateType === 'month' && (
+              <input
+                type="month"
+                value={analyticsMonthFilter}
+                onChange={(e) => setAnalyticsMonthFilter(e.target.value)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none focus:border-indigo-500"
+              />
+            )}
+
+            {analyticsDateType === 'range' && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={analyticsStartDate}
+                  onChange={(e) => setAnalyticsStartDate(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none focus:border-indigo-500"
+                />
+                <span className="text-slate-500 text-xs font-bold">TO</span>
+                <input
+                  type="date"
+                  value={analyticsEndDate}
+                  onChange={(e) => setAnalyticsEndDate(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-dark/40 border border-brand-border/60 text-slate-300 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            )}
+          </div>
+
+          <ReAnalyticsTab
+            people={data.people}
+            deals={filteredDeals}
+            properties={data.properties}
+            commissions={filteredCommissions}
+          />
+        </div>
       )}
 
       {activeTab === 'match' && (
