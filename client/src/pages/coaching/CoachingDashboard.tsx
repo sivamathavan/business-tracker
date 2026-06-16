@@ -257,6 +257,25 @@ export const CoachingDashboard: React.FC = () => {
     }
   };
 
+  const fetchData = async () => {
+    // Force refresh all key data for the dashboard without relying on local state cache
+    try {
+      const [stuRes, stfRes, batRes, exmRes] = await Promise.all([
+        apiClient.get('/coaching/students'),
+        apiClient.get('/coaching/staff'),
+        apiClient.get('/coaching/batches'),
+        apiClient.get('/coaching/exams')
+      ]);
+      if (stuRes.data.success) setStudents(stuRes.data.data);
+      if (stfRes.data.success) setStaff(stfRes.data.data);
+      if (batRes.data.success) setBatches(batRes.data.data);
+      if (exmRes.data.success) setExams(exmRes.data.data);
+      fetchAnalytics();
+    } catch (e) {
+      console.error('Failed to refresh data', e);
+    }
+  };
+
   const fetchAttendance = async (date: string) => {
     try {
       const res = await apiClient.get(`/coaching/attendance?date=${date}`);
