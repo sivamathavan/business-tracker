@@ -47,6 +47,7 @@ export const Login: React.FC = () => {
 
       if (response.data.success) {
         toast.success('Login successful! Redirecting...', { id: loadingToast });
+        setToken(response.data.accessToken);
         setUser(response.data.user);
         
         // Dynamic redirect to correct pipeline
