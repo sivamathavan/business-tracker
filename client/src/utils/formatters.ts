@@ -59,7 +59,10 @@ export const formatMobileStr = (num: string | null | undefined): string => {
 /**
  * Generates a wa.me/91XXXXXXXXXX WhatsApp link
  */
-export const getWhatsAppLink = (num: string | null | undefined): string => {
+/**
+ * Generates a wa.me/91XXXXXXXXXX WhatsApp link with optional pre-filled message
+ */
+export const getWhatsAppLink = (num: string | null | undefined, message?: string): string => {
   if (!num) return '#';
   let cleaned = cleanMobileStr(num);
   
@@ -68,5 +71,9 @@ export const getWhatsAppLink = (num: string | null | undefined): string => {
     cleaned = '91' + cleaned;
   }
   
-  return `https://wa.me/${cleaned}`;
+  let link = `https://wa.me/${cleaned}`;
+  if (message) {
+    link += `?text=${encodeURIComponent(message)}`;
+  }
+  return link;
 };

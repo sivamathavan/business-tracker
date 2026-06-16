@@ -53,10 +53,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       color: 'text-brand-tech group-hover:text-brand-tech/80',
     },
     {
-      name: 'AadanaTharakar',
+      name: 'DkProperties',
       path: '/dashboard/realestate',
       icon: Home,
-      roles: ['ADMIN', 'aadanatharakar'],
+      roles: ['ADMIN', 'aadanatharakar', 'dkproperties'],
       color: 'text-brand-re group-hover:text-brand-re/80',
     },
     {
@@ -67,7 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       color: 'text-brand-training group-hover:text-brand-training/80',
     },
     {
-      name: 'CKS Tuition',
+      name: 'AchieversNest',
       path: '/dashboard/coaching',
       icon: Sparkles,
       roles: ['ADMIN', 'rturox_coaching'],

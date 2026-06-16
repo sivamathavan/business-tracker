@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AadanaTharakar — Hooks & Helpers (API Wired)
+// DkProperties — Hooks & Helpers (API Wired)
 // ═══════════════════════════════════════
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';

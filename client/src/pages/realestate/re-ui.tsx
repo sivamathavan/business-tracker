@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AadanaTharakar — Shared UI Pieces
+// DkProperties — Shared UI Pieces
 // ═══════════════════════════════════════
 import React from 'react';
 import { X, Search } from 'lucide-react';

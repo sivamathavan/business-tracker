@@ -24,18 +24,26 @@ interface Student {
   student_id: string;
   student_name: string;
   father_name: string | null;
+  father_occupation: string | null;
   mother_name: string | null;
-  parent_mobile: string;
+  mother_occupation: string | null;
+  whatsapp_number: string | null;
+  phone_number: string | null;
+  parent_mobile: string | null;
   student_mobile: string | null;
   standard: string; // '1st' to '12th'
   section: string | null;
   school_name: string | null;
+  medium: string | null;        // Tamil or English
+  board: string | null;         // State Board, CBSE, ICSE, Matriculation
   department: 'General' | 'Science' | 'Commerce' | 'Arts' | null;
   subjects_enrolled: string | null;
   enrollment_date: string | null;
   monthly_fee: number;
   status: 'Active' | 'Inactive' | 'Completed';
+  attendance_percentage?: number;
 }
+
 
 interface FeeRecord {
   fee_id: string;
@@ -71,6 +79,7 @@ interface Batch {
   room_number: string | null;
   capacity: number;
   status: 'Active' | 'Holiday' | 'Completed';
+  active_count?: number;
 }
 
 interface Exam {
@@ -91,6 +100,7 @@ export const CoachingDashboard: React.FC = () => {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
+  const [growthRate, setGrowthRate] = useState<number | null>(null);
 
   // Attendance state
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
@@ -104,8 +114,23 @@ export const CoachingDashboard: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('');
 
   // Fee Views
+  const currentNow = new Date();
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  // Generate rolling 24 months (-12 to +11)
+  const generateRollingMonths = () => {
+    const months = [];
+    const d = new Date(currentNow.getFullYear(), currentNow.getMonth() - 12, 1);
+    for (let i = 0; i < 24; i++) {
+      months.push(`${monthNames[d.getMonth()]} ${d.getFullYear()}`);
+      d.setMonth(d.getMonth() + 1);
+    }
+    return months;
+  };
+  const rollingMonths = generateRollingMonths();
+
   const [feeView, setFeeView] = useState<'history' | 'monthly' | 'overdue'>('monthly');
-  const [selectedFeeMonth, setSelectedFeeMonth] = useState('June 2026');
+  const [selectedFeeMonth, setSelectedFeeMonth] = useState(`${monthNames[currentNow.getMonth()]} ${currentNow.getFullYear()}`);
   const [selectedStudentForFees, setSelectedStudentForFees] = useState<Student | null>(null);
   const [studentFeeHistory, setStudentFeeHistory] = useState<FeeRecord[]>([]);
   const [monthlyFeeCollection, setMonthlyFeeCollection] = useState<any[]>([]);
@@ -127,58 +152,106 @@ export const CoachingDashboard: React.FC = () => {
 
   const { register, handleSubmit, reset, setValue } = useForm();
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchStudents = async () => {
+    if (students.length > 0) return; // cache locally
     try {
-      const [studRes, staffRes, batchesRes, examsRes, overdueRes] = await Promise.all([
-        apiClient.get('/coaching/students'),
-        apiClient.get('/coaching/staff'),
-        apiClient.get('/coaching/batches'),
-        apiClient.get('/coaching/exams'),
-        apiClient.get('/coaching/fees/overdue')
-      ]);
-
-      if (studRes.data.success) setStudents(studRes.data.data);
-      if (staffRes.data.success) setStaff(staffRes.data.data);
-      if (batchesRes.data.success) setBatches(batchesRes.data.data);
-      if (examsRes.data.success) setExams(examsRes.data.data);
-      if (overdueRes.data.success) setOverdueFeesList(overdueRes.data.data);
-
-      // Check for overdue alerts dynamically
-      const overdueAlerts = overdueRes.data.data.map((item: any) => ({
-        id: `coaching-overdue-${item.student_id}`,
-        title: `Overdue Tuition Fees Alert!`,
-        message: `${item.student_name} (${item.standard}) is ${item.unpaid_months_count} months overdue. Total: ${formatINR(item.total_amount_due)}`,
-        type: 'error',
-        section: 'CKS Tuition'
-      }));
-
-      useAuthStore.getState().setNotifications(overdueAlerts);
+      const res = await apiClient.get('/coaching/students');
+      if (res.data.success) setStudents(res.data.data);
     } catch (e) {
-      toast.error('Failed to sync coaching dashboard data.');
-    } finally {
-      setLoading(false);
+      toast.error('Failed to load students.');
     }
   };
 
+  const fetchStaff = async () => {
+    if (staff.length > 0) return;
+    try {
+      const res = await apiClient.get('/coaching/staff');
+      if (res.data.success) setStaff(res.data.data);
+    } catch (e) {
+      toast.error('Failed to load staff.');
+    }
+  };
+
+  const fetchBatches = async () => {
+    if (batches.length > 0) return;
+    try {
+      const res = await apiClient.get('/coaching/batches');
+      if (res.data.success) setBatches(res.data.data);
+    } catch (e) {
+      toast.error('Failed to load batches.');
+    }
+  };
+
+  const fetchExams = async () => {
+    if (exams.length > 0) return;
+    try {
+      const res = await apiClient.get('/coaching/exams');
+      if (res.data.success) setExams(res.data.data);
+    } catch (e) {
+      toast.error('Failed to load exams.');
+    }
+  };
+
+  const fetchOverdueBackground = async () => {
+    try {
+      const res = await apiClient.get('/coaching/fees/overdue');
+      if (res.data.success) {
+        setOverdueFeesList(res.data.data);
+        const overdueAlerts = res.data.data.map((item: any) => ({
+          id: `coaching-overdue-${item.student_id}`,
+          title: `Overdue Tuition Fees Alert!`,
+          message: `${item.student_name} (${item.standard}) is ${item.unpaid_months_count} months overdue. Total: ${formatINR(item.total_amount_due)}`,
+          type: 'error',
+          section: 'AchieversNest'
+        }));
+        useAuthStore.getState().setNotifications(overdueAlerts);
+      }
+    } catch (e) {
+      console.error('Background fetch overdue failed');
+    }
+  };
+
+  // Initial Boot
   useEffect(() => {
-    fetchData();
-    fetchAnalytics();
+    let isMounted = true;
+    setLoading(true);
+    Promise.all([fetchStudents(), fetchAnalytics()]).finally(() => {
+      if (isMounted) setLoading(false);
+    });
+    // Silent background load
+    fetchOverdueBackground();
+    return () => { isMounted = false; };
   }, []);
 
+  // Lazy load by tab
   useEffect(() => {
-    if (activeTab === 'analytics') {
-      fetchAnalytics();
-    }
-    if (activeTab === 'attendance') {
-      fetchAttendance(attendanceDate);
-    }
-  }, [activeTab]);
+    if (activeTab === 'students') fetchStudents();
+    else if (activeTab === 'staff') fetchStaff();
+    else if (activeTab === 'batches') fetchBatches();
+    else if (activeTab === 'exams') fetchExams();
+    else if (activeTab === 'analytics') fetchAnalytics();
+    else if (activeTab === 'attendance') fetchAttendance(attendanceDate);
+  }, [activeTab, attendanceDate]);
 
   const fetchAnalytics = async () => {
     try {
       const res = await apiClient.get('/coaching/analytics');
-      if (res.data.success) setAnalytics(res.data.analytics);
+      if (res.data.success) {
+        const data = res.data.analytics;
+        setAnalytics(data);
+        
+        // Compute Month-over-Month growth rate from monthlyTrend array
+        if (data.monthlyTrend && data.monthlyTrend.length >= 2) {
+          const currentMonth = data.monthlyTrend[data.monthlyTrend.length - 1];
+          const previousMonth = data.monthlyTrend[data.monthlyTrend.length - 2];
+          if (previousMonth.collected > 0) {
+            const growth = ((currentMonth.collected - previousMonth.collected) / previousMonth.collected) * 100;
+            setGrowthRate(Number(growth.toFixed(1)));
+          } else {
+            setGrowthRate(null);
+          }
+        }
+      }
     } catch (error) {
       toast.error('Failed to load analytics.');
     }
@@ -338,14 +411,20 @@ export const CoachingDashboard: React.FC = () => {
         total_marks: Number(data.total_marks || 100)
       };
 
-      const res = await apiClient.post('/coaching/exams', payload);
+      let res;
+      if (examModal.editRecord) {
+        res = await apiClient.put(`/coaching/exams/${examModal.editRecord.exam_id}`, payload);
+      } else {
+        res = await apiClient.post('/coaching/exams', payload);
+      }
+
       if (res.data.success) {
-        toast.success('Exam template generated.');
+        toast.success(examModal.editRecord ? 'Exam template updated.' : 'Exam template generated.');
         setExamModal({ open: false, editRecord: null });
         fetchData();
       }
     } catch (e) {
-      toast.error('Failed to generate exam template.');
+      toast.error('Failed to save exam template.');
     }
   };
 
@@ -403,16 +482,56 @@ export const CoachingDashboard: React.FC = () => {
   };
 
   const handleAutoGenerateFees = async () => {
-    if (!window.confirm('Are you sure you want to auto-generate pending fee records for all active students for this month?')) return;
+    if (!window.confirm(`Are you sure you want to auto-generate pending fee records for all active students for ${selectedFeeMonth}?`)) return;
     try {
-      const res = await apiClient.post('/coaching/fees/auto-generate');
+      const res = await apiClient.post('/coaching/fees/auto-generate', { monthYear: selectedFeeMonth });
       if (res.data.success) {
         toast.success(res.data.message);
+        
+        // Refresh monthly collection
+        const refreshRes = await apiClient.get(`/coaching/fees/monthly?monthYear=${selectedFeeMonth}`);
+        if (refreshRes.data.success) setMonthlyFeeCollection(refreshRes.data.data);
+        
         fetchData();
       }
     } catch (e: any) {
       toast.error(e.response?.data?.message || 'Failed to auto-generate fees');
     }
+  };
+
+  // --- EXPORT DATA ---
+  const handleExportMonthlyCSV = () => {
+    if (monthlyFeeCollection.length === 0) return toast.error('No data to export.');
+    const exportData = monthlyFeeCollection.map(r => ({
+      'Student Name': r.student_name,
+      'Standard': r.standard,
+      'Fee Amount': r.monthly_fee,
+      'Status': r.status,
+      'Paid Date': r.paid_date ? String(r.paid_date).split('T')[0] : 'N/A',
+      'Receipt No': r.receipt_number || 'N/A',
+      'Contact': r.parent_mobile || 'N/A'
+    }));
+    exportToCSV(exportData, `Tuition_Collection_${selectedFeeMonth.replace(' ', '_')}`);
+  };
+
+  const handleExportMonthlyPDF = () => {
+    if (monthlyFeeCollection.length === 0) return toast.error('No data to export.');
+    const headers = ['Student Name', 'Std', 'Amount', 'Status', 'Paid Date', 'Receipt'];
+    const rows = monthlyFeeCollection.map(r => [
+      r.student_name,
+      r.standard,
+      formatINR(r.monthly_fee),
+      r.status,
+      r.paid_date ? formatDateStr(r.paid_date) : '-',
+      r.receipt_number || '-'
+    ]);
+    exportToPDF(
+      `Monthly Tuition Collection: ${selectedFeeMonth}`,
+      headers,
+      rows,
+      `Tuition_Collection_${selectedFeeMonth.replace(' ', '_')}`,
+      [247, 183, 49] // Brand Coaching color (Yellow)
+    );
   };
 
   // --- DELETE CONTROLS ---
@@ -449,6 +568,17 @@ export const CoachingDashboard: React.FC = () => {
     }
   };
 
+  const handleDeleteExam = async (id: string) => {
+    if (!window.confirm('Delete this exam template? All result records will also be soft-deleted.')) return;
+    try {
+      await apiClient.delete(`/coaching/exams/${id}`);
+      toast.success('Exam template deleted.');
+      fetchData();
+    } catch (e) {
+      toast.error('Delete failed.');
+    }
+  };
+
   // --- FILTERING & SORTING LOGIC ---
   const filteredStudents = students.filter((s) => {
     const matchesSearch = s.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -465,16 +595,24 @@ export const CoachingDashboard: React.FC = () => {
   };
 
   const handlePrintReceipt = (feeRecord: any) => {
-    if (!selectedStudentForFees) return;
+    // Determine student info from either the selected student (history view) or the fee record itself (monthly grid)
+    const studentName = selectedStudentForFees?.student_name || feeRecord.student_name;
+    const studentId = selectedStudentForFees?.student_id || feeRecord.student_id;
+    const standard = selectedStudentForFees?.standard || feeRecord.standard;
+
+    if (!studentName || !studentId) {
+      toast.error('Cannot print receipt: Student details missing.');
+      return;
+    }
     
     generateFeeReceipt({
-      businessName: 'CKS Tuition',
+      businessName: 'AchieversNest',
       businessAddress: '123 Tech Park, Chennai, Tamil Nadu',
       receiptNumber: feeRecord.receipt_number || `REC-${feeRecord.fee_id.substring(0, 8).toUpperCase()}`,
       date: feeRecord.paid_date || new Date().toISOString(),
-      studentName: selectedStudentForFees.student_name,
-      studentId: selectedStudentForFees.student_id,
-      courseOrStandard: selectedStudentForFees.standard,
+      studentName: studentName,
+      studentId: studentId,
+      courseOrStandard: standard || 'N/A',
       paymentMode: feeRecord.payment_mode || 'Cash',
       amount: feeRecord.fee_amount,
       status: feeRecord.status
@@ -595,43 +733,93 @@ export const CoachingDashboard: React.FC = () => {
               <thead>
                 <tr className="border-b border-brand-border/40 text-slate-400">
                   <th className="p-4">Student</th>
-                  <th className="p-4">Father Name</th>
+                  <th className="p-4">Parent / Occupation</th>
                   <th className="p-4">Standard</th>
-                  <th className="p-4">Dept (11/12th)</th>
+                  <th className="p-4">School</th>
+                  <th className="p-4">Medium / Board</th>
                   <th className="p-4">Monthly Fee</th>
+                  <th className="p-4">Fee Due</th>
                   <th className="p-4">Enroll Date</th>
-                  <th className="p-4">Subjects Enrolled</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-center">WA parent</th>
+                  <th className="p-4">Status & Attendance</th>
+                  <th className="p-4 text-center">WhatsApp</th>
                   <th className="p-4 text-right print-hidden">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-border/20">
                 {filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="p-8 text-center text-slate-500 font-bold uppercase tracking-wider">
+                    <td colSpan={11} className="p-8 text-center text-slate-500 font-bold uppercase tracking-wider">
                       No active students found.
                     </td>
                   </tr>
                 ) : (
-                  filteredStudents.map((s) => (
+                  filteredStudents.map((s) => {
+                    const overdueItem = overdueFeesList.find(o => o.student_id === s.student_id);
+                    const whatsappContact = s.whatsapp_number || s.phone_number || s.parent_mobile;
+                    return (
                     <tr key={s.student_id} className="hover:bg-slate-800/10 transition-colors">
-                      <td className="p-4 text-white font-bold">{s.student_name}</td>
-                      <td className="p-4 text-slate-300">{s.father_name || '-'}</td>
-                      <td className="p-4 text-brand-coaching font-bold">{s.standard}</td>
-                      <td className="p-4 text-slate-400">{s.department || '-'}</td>
+                      <td className="p-4">
+                        <p className="text-white font-bold">{s.student_name}</p>
+                        {s.student_mobile && <p className="text-[10px] text-slate-500 mt-0.5">{formatMobileStr(s.student_mobile)}</p>}
+                      </td>
+                      <td className="p-4">
+                        {s.father_name && (
+                          <p className="text-slate-300 font-semibold">
+                            {s.father_name}
+                            {s.father_occupation && <span className="text-slate-500 font-normal"> · {s.father_occupation}</span>}
+                          </p>
+                        )}
+                        {s.mother_name && (
+                          <p className="text-slate-400 text-[10px] mt-0.5">
+                            {s.mother_name}
+                            {s.mother_occupation && <span> · {s.mother_occupation}</span>}
+                          </p>
+                        )}
+                        {!s.father_name && !s.mother_name && <span className="text-slate-600">-</span>}
+                      </td>
+                      <td className="p-4 text-brand-coaching font-bold">{s.standard}{s.section ? ` - ${s.section}` : ''}</td>
+                      <td className="p-4 text-slate-400 max-w-[120px] truncate" title={s.school_name || ''}>{s.school_name || '-'}</td>
+                      <td className="p-4">
+                        {s.medium && (
+                          <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-black border mb-1 ${
+                            s.medium === 'Tamil' ? 'bg-amber-950/20 text-amber-400 border-amber-900/30' : 'bg-blue-950/20 text-blue-400 border-blue-900/30'
+                          }`}>
+                            {s.medium}
+                          </span>
+                        )}
+                        {s.board && <p className="text-[10px] text-slate-500 mt-0.5">{s.board}</p>}
+                        {!s.medium && !s.board && <span className="text-slate-600">-</span>}
+                      </td>
                       <td className="p-4 text-white font-bold">{formatINR(s.monthly_fee)}</td>
+                      <td className="p-4">
+                        {overdueItem ? (
+                          <div>
+                            <span className="text-rose-400 font-black">{formatINR(overdueItem.total_amount_due)}</span>
+                            <p className="text-[9px] text-rose-500 mt-0.5">{overdueItem.unpaid_months_count} month{overdueItem.unpaid_months_count > 1 ? 's' : ''} due</p>
+                          </div>
+                        ) : (
+                          <span className="text-emerald-500 font-bold text-[10px]">✓ Clear</span>
+                        )}
+                      </td>
                       <td className="p-4 text-slate-400">{formatDateStr(s.enrollment_date)}</td>
-                      <td className="p-4 text-slate-400 max-w-[150px] truncate" title={s.subjects_enrolled || ''}>{s.subjects_enrolled || '-'}</td>
-                      <td className="p-4"><StatusBadge status={s.status} /></td>
+                      <td className="p-4">
+                        <StatusBadge status={s.status} />
+                        {(s.attendance_percentage !== undefined) && (
+                          <div className="mt-1 flex items-center gap-1 text-[9px] font-bold">
+                            <span className={s.attendance_percentage >= 75 ? 'text-emerald-500' : s.attendance_percentage >= 50 ? 'text-amber-500' : 'text-rose-500'}>
+                              {s.attendance_percentage}% Attendance
+                            </span>
+                          </div>
+                        )}
+                      </td>
                       <td className="p-4 text-center">
-                        <WhatsAppButton mobile={s.parent_mobile} />
+                        <WhatsAppButton mobile={whatsappContact || ''} />
                       </td>
                       <td className="p-4 text-right print-hidden space-x-1.5 whitespace-nowrap">
                         <button
                           onClick={() => handleLoadStudentFeeHistory(s)}
                           className="p-1 text-slate-400 hover:text-brand-coaching rounded hover:bg-slate-800"
-                          title="View 12-Month tuition payments"
+                          title="View tuition payments"
                         >
                           <Wallet className="w-3.5 h-3.5" />
                         </button>
@@ -662,13 +850,15 @@ export const CoachingDashboard: React.FC = () => {
                         </button>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
         </div>
       )}
+
 
       {/* =======================================================================
           TAB 2: TUITION FEE MANAGEMENT
@@ -709,18 +899,34 @@ export const CoachingDashboard: React.FC = () => {
                     onChange={(e) => setSelectedFeeMonth(e.target.value)}
                     className="p-2 bg-slate-900 border border-brand-border/60 rounded-xl text-xs text-slate-200 font-semibold focus:outline-none"
                   >
-                    {['January 2026', 'February 2026', 'March 2026', 'April 2026', 'May 2026', 'June 2026', 'July 2026', 'August 2026', 'September 2026', 'October 2026', 'November 2026', 'December 2026'].map(m => (
+                    {rollingMonths.map(m => (
                       <option key={m} value={m}>{m}</option>
                     ))}
                   </select>
                 </div>
-                <button
-                  onClick={handleAutoGenerateFees}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-brand-border/60 rounded-xl text-xs font-black uppercase text-slate-200 transition-all"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Auto-Generate Month Fees
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleExportMonthlyCSV}
+                    title="Export to CSV"
+                    className="p-2 bg-slate-800 hover:bg-slate-700 border border-brand-border/60 rounded-xl text-slate-400 hover:text-slate-200 transition-all"
+                  >
+                    <FileText className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleExportMonthlyPDF}
+                    title="Export to PDF"
+                    className="p-2 bg-slate-800 hover:bg-slate-700 border border-brand-border/60 rounded-xl text-slate-400 hover:text-slate-200 transition-all"
+                  >
+                    <Printer className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleAutoGenerateFees}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-brand-border/60 rounded-xl text-xs font-black uppercase text-slate-200 transition-all ml-1"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Auto-Generate Month Fees
+                  </button>
+                </div>
               </div>
 
               <div className="overflow-x-auto bg-brand-card/75 border border-brand-border/60 rounded-3xl backdrop-blur-md">
@@ -738,38 +944,52 @@ export const CoachingDashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-brand-border/20">
-                    {monthlyFeeCollection.map(record => (
-                      <tr key={record.student_id} className="hover:bg-slate-800/10">
-                        <td className="p-4 text-white font-bold">{record.student_name}</td>
-                        <td className="p-4 text-brand-coaching">{record.standard}</td>
-                        <td className="p-4 text-white font-bold">{formatINR(record.monthly_fee)}</td>
-                        <td className="p-4 text-slate-400">{formatDateStr(record.paid_date)}</td>
-                        <td className="p-4 text-slate-400">{record.receipt_number || '-'}</td>
-                        <td className="p-4"><StatusBadge status={record.status} /></td>
-                        <td className="p-4 text-center">
-                          <WhatsAppButton mobile={record.parent_mobile} />
-                        </td>
-                        <td className="p-4 text-right print-hidden">
-                          {record.status !== 'Paid' ? (
-                            <button
-                              onClick={() => setFeeRecordModal({ open: true, record })}
-                              className="px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-brand-coaching hover:bg-brand-coaching/85 text-white shadow"
-                            >
-                              Collect Fee
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handlePrintReceipt(record)}
-                              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200"
-                              title="Print fee receipt"
-                            >
-                              <Printer className="w-4 h-4" />
-                            </button>
-                          )}
+                    {monthlyFeeCollection.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="p-8 text-center text-slate-500 font-semibold">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <p>No fee records found for this month.</p>
+                            <p className="text-[10px]">Click "Auto-Generate Pending Fees" to instantiate fee records for active students.</p>
+                          </div>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
+                    ) : (
+                      monthlyFeeCollection.map(record => (
+                        <tr key={record.student_id} className="hover:bg-slate-800/10">
+                          <td className="p-4 text-white font-bold">{record.student_name}</td>
+                          <td className="p-4 text-brand-coaching">{record.standard}</td>
+                          <td className="p-4 text-white font-bold">{formatINR(record.monthly_fee)}</td>
+                          <td className="p-4 text-slate-400">{formatDateStr(record.paid_date)}</td>
+                          <td className="p-4 text-slate-400">{record.receipt_number || '-'}</td>
+                          <td className="p-4"><StatusBadge status={record.status} /></td>
+                          <td className="p-4 text-center">
+                            <WhatsAppButton 
+                              mobile={record.parent_mobile} 
+                              message={record.status !== 'Paid' ? `Dear Parent, the tuition fee for ${record.student_name} for ${selectedFeeMonth} is pending. Amount: ${formatINR(record.monthly_fee)}. Please pay at the earliest. - AchieversNest` : undefined}
+                            />
+                          </td>
+                          <td className="p-4 text-right print-hidden">
+                            {record.status !== 'Paid' ? (
+                              <button
+                                onClick={() => setFeeRecordModal({ open: true, record })}
+                                className="px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-brand-coaching hover:bg-brand-coaching/85 text-white shadow"
+                              >
+                                Collect Fee
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handlePrintReceipt(record)}
+                                className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                                title="Print fee receipt"
+                              >
+                                <Printer className="w-4 h-4" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                </tbody>
                 </table>
               </div>
             </div>
@@ -801,7 +1021,10 @@ export const CoachingDashboard: React.FC = () => {
                       <td className="p-4 text-slate-400">{item.unpaid_months.join(', ')}</td>
                       <td className="p-4 text-rose-400 font-black">{formatINR(item.total_amount_due)}</td>
                       <td className="p-4 text-center">
-                        <WhatsAppButton mobile={item.parent_mobile} />
+                        <WhatsAppButton 
+                          mobile={item.parent_mobile} 
+                          message={`Dear Parent, the tuition fee for ${item.student_name} is pending for ${item.unpaid_months_count} month(s) (${item.unpaid_months.join(', ')}). Total amount due: ${formatINR(item.total_amount_due)}. Please pay at the earliest. - AchieversNest`}
+                        />
                       </td>
                       <td className="p-4 text-right print-hidden">
                         <button
@@ -915,7 +1138,7 @@ export const CoachingDashboard: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {batches.map((b) => {
-              const activeCount = students.filter(s => s.standard === b.standard && s.status === 'Active').length;
+              const activeCount = b.active_count || 0;
               
               return (
                 <div key={b.batch_id} className="rounded-2xl border border-brand-border/60 bg-brand-card p-5 space-y-4 hover:border-brand-coaching/40 transition-colors">
@@ -1197,12 +1420,31 @@ export const CoachingDashboard: React.FC = () => {
                     <div className="flex items-center justify-between pt-2 border-t border-brand-border/20 text-[10px] font-bold text-slate-500">
                       <span>Date: {formatDateStr(exam.exam_date)}</span>
                       
-                      <button
-                        onClick={() => handleLoadExamMarksheet(exam)}
-                        className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-brand-border"
-                      >
-                        Enter Marks
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            reset(exam);
+                            if (exam.exam_date) setValue('exam_date', String(exam.exam_date).split('T')[0]);
+                            setExamModal({ open: true, editRecord: exam });
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-brand-coaching/20 text-slate-400 hover:text-brand-coaching transition-colors"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteExam(exam.exam_id)}
+                          className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-500 transition-colors"
+                          title="Delete Exam"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleLoadExamMarksheet(exam)}
+                          className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-brand-border ml-1"
+                        >
+                          Enter Marks
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1381,7 +1623,7 @@ export const CoachingDashboard: React.FC = () => {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-brand-border/40 pb-5">
                       <div className="text-left">
                         <h2 className="text-lg md:text-xl font-extrabold text-white font-heading">
-                          ⚡ CKS Tuition
+                          ⚡ AchieversNest
                         </h2>
                         <p className="text-xs text-slate-400 mt-1 font-semibold">
                           Tambaram West, Chennai | Academic Report Card
@@ -1537,6 +1779,19 @@ export const CoachingDashboard: React.FC = () => {
                     {formatINR(analytics.overallFeesCollected - analytics.staffSalaryTotal)}
                   </span>
                 </div>
+
+                {growthRate !== null && (
+                  <div className="flex justify-between items-center py-2.5 mt-2 border-t border-brand-border/40 bg-slate-900/40 px-3 rounded-xl">
+                    <span className="text-slate-400">MoM Growth Rate:</span>
+                    <span className={`font-black text-xs px-2 py-1 rounded ${
+                      growthRate > 0 ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/50' : 
+                      growthRate < 0 ? 'bg-rose-950/40 text-rose-400 border border-rose-900/50' : 
+                      'bg-slate-800 text-slate-400'
+                    }`}>
+                      {growthRate > 0 ? '+' : ''}{growthRate}%
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1597,167 +1852,175 @@ export const CoachingDashboard: React.FC = () => {
           ======================================================================= */}
       {studentModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-dark/80 backdrop-blur-sm select-none">
-          <div className="w-full max-w-lg bg-[#161623] border border-brand-border rounded-3xl p-6 shadow-2xl space-y-4">
+          <div className="w-full max-w-2xl bg-[#161623] border border-brand-border rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-base font-extrabold text-white font-heading">
-              {studentModal.editRecord ? 'Modify Student Profile' : 'Register coaching Student'}
+              {studentModal.editRecord ? 'Modify Student Profile' : 'Register Coaching Student'}
             </h3>
-            
-            <form onSubmit={handleSubmit(handleStudentSubmit)} className="grid grid-cols-2 gap-4 text-xs font-semibold">
-              <div className="space-y-1 col-span-2">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Student Name</label>
+
+            <form onSubmit={handleSubmit(handleStudentSubmit)} className="space-y-5 text-xs font-semibold">
+
+              {/* Student Name */}
+              <div className="space-y-1">
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Student Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="Enter full name"
                   {...register('student_name')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
+                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Father Name</label>
-                <input
-                  type="text"
-                  {...register('father_name')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                />
+              {/* Parent Details */}
+              <div>
+                <p className="text-[10px] text-brand-coaching uppercase tracking-widest font-black mb-3">Parent / Guardian Details</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Father Name</label>
+                    <input type="text" {...register('father_name')} placeholder="Father's full name"
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Father's Occupation</label>
+                    <input type="text" {...register('father_occupation')} placeholder="e.g. Cooli, Builder, Teacher"
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Mother Name</label>
+                    <input type="text" {...register('mother_name')} placeholder="Mother's full name"
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Mother's Occupation</label>
+                    <input type="text" {...register('mother_occupation')} placeholder="e.g. House Wife, Tailor"
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Numbers */}
+              <div>
+                <p className="text-[10px] text-brand-coaching uppercase tracking-widest font-black mb-3">Contact Numbers</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">WhatsApp Number</label>
+                    <input type="tel" {...register('whatsapp_number')} placeholder="e.g. 9876543210"
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Phone Number (Alternate)</label>
+                    <input type="tel" {...register('phone_number')} placeholder="e.g. 9876543210"
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Student Mobile</label>
+                    <input type="tel" {...register('student_mobile')} placeholder="Student's own number"
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Academic Info */}
+              <div>
+                <p className="text-[10px] text-brand-coaching uppercase tracking-widest font-black mb-3">Academic Information</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1 col-span-2">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">School Name</label>
+                    <input type="text" {...register('school_name')} placeholder="e.g. CMS Vadavalli"
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Medium</label>
+                    <select {...register('medium')}
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching">
+                      <option value="">Select medium</option>
+                      <option value="Tamil">Tamil</option>
+                      <option value="English">English</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Board</label>
+                    <select {...register('board')}
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching">
+                      <option value="">Select board</option>
+                      <option value="State Board">State Board</option>
+                      <option value="CBSE">CBSE</option>
+                      <option value="ICSE">ICSE</option>
+                      <option value="Matriculation">Matriculation</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Academic Standard *</label>
+                    <select {...register('standard')}
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching">
+                      {['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'].map(st => (
+                        <option key={st} value={st}>{st} Standard</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Class Section</label>
+                    <input type="text" {...register('section')} placeholder="E.g. A, B, C"
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Department (11/12th only)</label>
+                    <select {...register('department')}
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching">
+                      <option value="">None (Under 11th)</option>
+                      <option value="General">General</option>
+                      <option value="Science">Science</option>
+                      <option value="Commerce">Commerce</option>
+                      <option value="Arts">Arts</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Subjects Enrolled (Comma separated)</label>
+                    <input type="text" {...register('subjects_enrolled')} placeholder="Tamil, English, Maths, Science"
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Fee & Status */}
+              <div>
+                <p className="text-[10px] text-brand-coaching uppercase tracking-widest font-black mb-3">Fee & Status</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Monthly Fee (₹) *</label>
+                    <input type="number" required {...register('monthly_fee')}
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Joining / Enrollment Date</label>
+                    <input type="date" {...register('enrollment_date')}
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Profile Status</label>
+                    <select {...register('status')}
+                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching">
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                      <option value="Completed">Completed</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Mother Name</label>
-                <input
-                  type="text"
-                  {...register('mother_name')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Parent Mobile (WhatsApp)</label>
-                <input
-                  type="text"
-                  required
-                  {...register('parent_mobile')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Student Mobile</label>
-                <input
-                  type="text"
-                  {...register('student_mobile')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">School Name</label>
-                <input
-                  type="text"
-                  {...register('school_name')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Academic standard</label>
-                <select
-                  {...register('standard')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                >
-                  {['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'].map(st => (
-                    <option key={st} value={st}>{st} Standard</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Class Section</label>
-                <input
-                  type="text"
-                  placeholder="E.g. A, B, C"
-                  {...register('section')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Department (11/12th only)</label>
-                <select
-                  {...register('department')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                >
-                  <option value="">None (Under 11th)</option>
-                  <option value="General">General</option>
-                  <option value="Science">Science</option>
-                  <option value="Commerce">Commerce</option>
-                  <option value="Arts">Arts</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Monthly fixed fee (₹)</label>
-                <input
-                  type="number"
-                  required
-                  {...register('monthly_fee')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Enrollment Date</label>
-                <input
-                  type="date"
-                  {...register('enrollment_date')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Profile Status</label>
-                <select
-                  {...register('status')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Completed">Completed</option>
-                </select>
-              </div>
-
-              <div className="col-span-2 space-y-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Subjects enrolled (Comma separated)</label>
-                <input
-                  type="text"
-                  placeholder="Tamil, English, Maths, Science"
-                  {...register('subjects_enrolled')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="col-span-2 space-y-1">
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider">Profile Notes</label>
-                <textarea
-                  placeholder="Special notations..."
-                  {...register('notes')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none h-16 resize-none"
-                />
+                <textarea placeholder="Special notations..." {...register('notes')}
+                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none h-16 resize-none focus:border-brand-coaching" />
               </div>
 
-              <div className="col-span-2 flex items-center justify-end gap-2.5 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setStudentModal({ open: false, editRecord: null })}
-                  className="px-4 py-2 rounded-xl border border-brand-border hover:bg-slate-800 text-slate-400 hover:text-slate-200"
-                >
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-brand-border/30">
+                <button type="button" onClick={() => setStudentModal({ open: false, editRecord: null })}
+                  className="px-4 py-2 rounded-xl border border-brand-border hover:bg-slate-800 text-slate-400 hover:text-slate-200">
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md"
-                >
+                <button type="submit"
+                  className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md">
                   Save Profile
                 </button>
               </div>
@@ -1765,6 +2028,8 @@ export const CoachingDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+
 
       {/* =======================================================================
           MODAL: ADD/EDIT TEACHER
@@ -2026,7 +2291,7 @@ export const CoachingDashboard: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-dark/80 backdrop-blur-sm select-none">
           <div className="w-full max-w-md bg-[#161623] border border-brand-border rounded-3xl p-6 shadow-2xl space-y-4">
             <h3 className="text-base font-extrabold text-white font-heading">
-              Generate Exam Template
+              {examModal.editRecord ? 'Modify Exam Template' : 'Generate Exam Template'}
             </h3>
             
             <form onSubmit={handleSubmit(handleExamSubmit)} className="space-y-4 text-xs font-semibold">

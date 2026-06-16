@@ -16,6 +16,7 @@ const re_routes_1 = __importDefault(require("./routes/re.routes"));
 const training_routes_1 = __importDefault(require("./routes/training.routes"));
 const coaching_routes_1 = __importDefault(require("./routes/coaching.routes"));
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
+const expense_routes_1 = __importDefault(require("./routes/expense.routes"));
 const errorHandler_1 = require("./middleware/errorHandler");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
@@ -55,6 +56,7 @@ app.use('/api/v1/re', re_routes_1.default);
 app.use('/api/v1/training', training_routes_1.default);
 app.use('/api/v1/coaching', coaching_routes_1.default);
 app.use('/api/v1/admin', admin_routes_1.default);
+app.use('/api/v1/expenses', expense_routes_1.default);
 // Fallback Route
 app.use('*', (_req, res) => {
     res.status(404).json({ success: false, message: 'Resource API path not found.' });

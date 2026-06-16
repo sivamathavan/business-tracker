@@ -6,9 +6,9 @@ import { logActivity } from '../utils/activityLogger';
 // Business slug → display name mapping for activity logs
 const BUSINESS_LABELS: Record<string, string> = {
   tech: 'Rturox Technology',
-  realestate: 'AadanaTharakar',
+  realestate: 'DkProperties',
   training: 'RturoxAcademy',
-  coaching: 'CKS Tuition'
+  coaching: 'AchieversNest'
 };
 
 const VALID_SLUGS = ['tech', 'realestate', 'training', 'coaching'];
@@ -278,9 +278,9 @@ export const getExpenseSummary = async (req: AuthenticatedRequest, res: Response
     const monthlyData = monthNames.map(m => ({
       name: m,
       'Rturox Technology': monthlyTrend[m].tech || 0,
-      'AadanaTharakar': monthlyTrend[m].realestate || 0,
+      'DkProperties': monthlyTrend[m].realestate || 0,
       'RturoxAcademy': monthlyTrend[m].training || 0,
-      'CKS Tuition': monthlyTrend[m].coaching || 0
+      'AchieversNest': monthlyTrend[m].coaching || 0
     }));
 
     return res.status(200).json({

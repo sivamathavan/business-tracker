@@ -54,6 +54,7 @@ const getAdminOverview = async (req, res, next) => {
         const trainingStudents = await prisma_1.prisma.trainingStudent.findMany({ where: { deleted_at: null } });
         const trainingFees = await prisma_1.prisma.trainingFeeInstallment.findMany({ where: { deleted_at: null } });
         const coachingFeeRecords = await prisma_1.prisma.coachingFeeRecord.findMany({ where: { deleted_at: null } });
+        const allExpenses = await prisma_1.prisma.expense.findMany({ where: { deleted_at: null } });
         // --- Tech Calculations (mirrors tech.controller getTechAnalytics) ---
         // Collected = sum(amount_received) across all projects
         // Pending   = sum(total_amount - amount_received) for each project (floored at 0)
@@ -101,6 +102,12 @@ const getAdminOverview = async (req, res, next) => {
         // Consolidated Metrics
         const grandTotalRevenue = techCollected + reCollected + trainingCollected + coachingCollected;
         const grandTotalPending = techPending + rePending + trainingPending + coachingPending;
+        // --- Expense Calculations ---
+        const expenseByBiz = { tech: 0, realestate: 0, training: 0, coaching: 0 };
+        allExpenses.forEach(e => {
+            expenseByBiz[e.business_slug] = (expenseByBiz[e.business_slug] || 0) + Number(e.amount || 0);
+        });
+        const grandTotalExpenses = Object.values(expenseByBiz).reduce((s, v) => s + v, 0);
         // Tile statistics per business
         const businessTiles = businesses.map(b => {
             let revenue = 0;
@@ -139,7 +146,8 @@ const getAdminOverview = async (req, res, next) => {
                 revenue,
                 pending,
                 keyCount,
-                label
+                label,
+                expenses: expenseByBiz[b.slug] || 0
             };
         });
         return res.status(200).json({
@@ -147,6 +155,7 @@ const getAdminOverview = async (req, res, next) => {
             data: {
                 grandTotalRevenue,
                 grandTotalPending,
+                grandTotalExpenses,
                 businessTiles
             }
         });
@@ -278,9 +287,11 @@ const resetBusinessData = async (req, res, next) => {
     try {
         const { slug } = req.body;
         if (slug === 'tech') {
+            await prisma_1.prisma.techProjectMilestone.deleteMany({});
             await prisma_1.prisma.techProject.deleteMany({});
             await prisma_1.prisma.techInvoice.deleteMany({});
             await prisma_1.prisma.techProposal.deleteMany({});
+            await prisma_1.prisma.expense.deleteMany({ where: { business_slug: 'tech' } });
         }
         else if (slug === 'realestate') {
             await prisma_1.prisma.reActivity.deleteMany({});
@@ -290,12 +301,14 @@ const resetBusinessData = async (req, res, next) => {
             await prisma_1.prisma.reProperty.deleteMany({});
             await prisma_1.prisma.reDeal.deleteMany({});
             await prisma_1.prisma.rePerson.deleteMany({});
+            await prisma_1.prisma.expense.deleteMany({ where: { business_slug: 'realestate' } });
         }
         else if (slug === 'training') {
             await prisma_1.prisma.trainingCourse.deleteMany({});
             await prisma_1.prisma.trainingStudent.deleteMany({});
             await prisma_1.prisma.trainingBatch.deleteMany({});
             await prisma_1.prisma.trainingStudyLog.deleteMany({});
+            await prisma_1.prisma.expense.deleteMany({ where: { business_slug: 'training' } });
         }
         else if (slug === 'coaching') {
             await prisma_1.prisma.coachingResult.deleteMany({});
@@ -304,6 +317,7 @@ const resetBusinessData = async (req, res, next) => {
             await prisma_1.prisma.coachingBatch.deleteMany({});
             await prisma_1.prisma.coachingFeeRecord.deleteMany({});
             await prisma_1.prisma.coachingStudent.deleteMany({});
+            await prisma_1.prisma.expense.deleteMany({ where: { business_slug: 'coaching' } });
         }
         else {
             return res.status(400).json({ success: false, message: 'Invalid business slug.' });
@@ -381,9 +395,9 @@ const getConsolidatedRevenueTrend = async (req, res, next) => {
             return {
                 name: m,
                 'Rturox Technology': techVal,
-                'AadanaTharakar': reVal,
+                'DkProperties': reVal,
                 'RturoxAcademy': trainingVal,
-                'CKS Tuition': coachingVal,
+                'AchieversNest': coachingVal,
                 total: techVal + reVal + trainingVal + coachingVal
             };
         });
@@ -466,7 +480,7 @@ const globalSearch = async (req, res, next) => {
                 id: p.id,
                 name: p.name,
                 mobile: p.mobile,
-                business: 'AadanaTharakar',
+                business: 'DkProperties',
                 context: `${p.person_type} - ${p.district} (${p.status})`,
                 timestamp: p.created_at
             })),

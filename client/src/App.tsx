@@ -129,7 +129,7 @@ const App: React.FC = () => {
             path="/dashboard/realestate"
             element={
               <ProtectedRoute allowedSlugs={['realestate']}>
-                <DashboardLayout title="🏠 AadanaTharakar Dashboard">
+                <DashboardLayout title="🏠 DkProperties Dashboard">
                   <ReDashboard />
                 </DashboardLayout>
               </ProtectedRoute>
@@ -151,7 +151,7 @@ const App: React.FC = () => {
             path="/dashboard/coaching"
             element={
               <ProtectedRoute allowedSlugs={['coaching']}>
-                <DashboardLayout title="🌟 CKS Tuition Portal">
+                <DashboardLayout title="🌟 AchieversNest Portal">
                   <CoachingDashboard />
                 </DashboardLayout>
               </ProtectedRoute>

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AadanaTharakar — Overview Tab
+// DkProperties — Overview Tab
 // ═══════════════════════════════════════
 import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';

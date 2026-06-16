@@ -16,8 +16,10 @@ const parsePeoplePayload = (body) => {
     const data = { ...body };
     if (data.created_at === '')
         delete data.created_at;
-    if (data.buyer_budget === '')
+    if (data.buyer_budget === '' || data.buyer_budget === undefined)
         data.buyer_budget = null;
+    if (data.buyer_property_type === '' || data.buyer_property_type === 'Any')
+        data.buyer_property_type = null;
     if (data.commission_rate === '')
         data.commission_rate = 0;
     if (data.total_commission === '')
@@ -132,7 +134,13 @@ const deleteDeal = async (req, res, next) => {
 exports.deleteDeal = deleteDeal;
 const getProperties = async (req, res, next) => {
     try {
-        const data = await prisma_1.prisma.reProperty.findMany({ where: { deleted_at: null }, orderBy: { created_at: 'desc' } });
+        const raw = await prisma_1.prisma.reProperty.findMany({ where: { deleted_at: null }, orderBy: { created_at: 'desc' } });
+        // Parse JSON string fields back to JS objects so the client can use them directly
+        const data = raw.map((p) => ({
+            ...p,
+            doc_checklist: p.doc_checklist ? JSON.parse(p.doc_checklist) : {},
+            photos: p.photos ? JSON.parse(p.photos) : [],
+        }));
         return res.status(200).json({ success: true, data });
     }
     catch (error) {

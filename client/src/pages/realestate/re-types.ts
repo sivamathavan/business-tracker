@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AadanaTharakar — Types & Constants
+// DkProperties — Types & Constants
 // ═══════════════════════════════════════
 
 export const RE_TABS = [

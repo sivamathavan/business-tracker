@@ -39,9 +39,9 @@ const PAYMENT_MODES = ['Cash', 'UPI', 'Bank Transfer', 'Card'];
 
 const BUSINESS_OPTIONS = [
   { slug: 'tech', label: 'Rturox Technology' },
-  { slug: 'realestate', label: 'AadanaTharakar' },
+  { slug: 'realestate', label: 'DkProperties' },
   { slug: 'training', label: 'RturoxAcademy' },
-  { slug: 'coaching', label: 'CKS Tuition' }
+  { slug: 'coaching', label: 'AchieversNest' }
 ];
 
 const CATEGORY_ICONS: Record<string, React.FC<any>> = {

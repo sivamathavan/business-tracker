@@ -11,6 +11,8 @@ import {
   getOverdueFeesList,
   getExams,
   createExam,
+  updateExam,
+  deleteExam,
   getExamMarksheet,
   saveBulkExamResults,
   getStudentReportCardData,
@@ -80,6 +82,8 @@ router.post(
   ],
   createExam
 );
+router.put('/exams/:id', updateExam);
+router.delete('/exams/:id', deleteExam);
 router.get('/exams/:examId/marksheet', getExamMarksheet);
 router.post('/exams/:examId/marksheet', saveBulkExamResults);
 router.get('/students/:studentId/report-card', getStudentReportCardData);

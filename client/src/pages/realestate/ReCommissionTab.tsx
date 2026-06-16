@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AadanaTharakar — Commission Tab
+// DkProperties — Commission Tab
 // ═══════════════════════════════════════
 import React, { useState, useMemo } from 'react';
 import { Calculator, Plus, Edit3, Trash2, Download, CheckCircle2 } from 'lucide-react';
@@ -268,15 +268,15 @@ export const ReCommissionTab: React.FC<Props> = ({ commissions, payouts, peopleP
           <div className="flex gap-3">
             <button onClick={() => {
               const data = [{ 'Expected': stats.totalExpected, 'Received': stats.totalReceived, 'Payouts': stats.totalPayouts, 'Net': stats.netCommission }];
-              exportToCSV(data, 'aadanatharakar_commission_summary');
+              exportToCSV(data, 'dkproperties_commission_summary');
             }} className="flex items-center gap-2 px-4 py-2 bg-brand-card border border-brand-border rounded-xl text-sm text-gray-400 hover:text-white transition-colors">
               <Download size={14} /> Export CSV
             </button>
             <button onClick={() => {
-              exportToPDF('AadanaTharakar — Net Summary', ['Metric', 'Amount'], [
+              exportToPDF('DkProperties — Net Summary', ['Metric', 'Amount'], [
                 ['Expected', formatINR(stats.totalExpected)], ['Received', formatINR(stats.totalReceived)],
                 ['Payouts', formatINR(stats.totalPayouts)], ['Net', formatINR(stats.netCommission)],
-              ], 'aadanatharakar_net_summary', [255, 107, 107]);
+              ], 'dkproperties_net_summary', [255, 107, 107]);
             }} className="flex items-center gap-2 px-4 py-2 bg-brand-card border border-brand-border rounded-xl text-sm text-gray-400 hover:text-white transition-colors">
               <Download size={14} /> Export PDF
             </button>

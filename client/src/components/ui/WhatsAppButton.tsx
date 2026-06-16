@@ -4,12 +4,13 @@ import { getWhatsAppLink, formatMobileStr } from '../../utils/formatters';
 interface WhatsAppButtonProps {
   mobile: string | null | undefined;
   showText?: boolean;
+  message?: string;
 }
 
-export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({ mobile, showText = false }) => {
+export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({ mobile, showText = false, message }) => {
   if (!mobile) return <span className="text-slate-500">-</span>;
 
-  const link = getWhatsAppLink(mobile);
+  const link = getWhatsAppLink(mobile, message);
 
   return (
     <a

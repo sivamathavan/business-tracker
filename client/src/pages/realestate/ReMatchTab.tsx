@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AadanaTharakar — Buyer ↔ Property Match
+// DkProperties — Buyer ↔ Property Match
 // ═══════════════════════════════════════
 import React, { useState, useMemo } from 'react';
 import {

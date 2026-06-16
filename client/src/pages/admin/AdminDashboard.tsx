@@ -72,9 +72,9 @@ const PAYMENT_MODES = ['Cash', 'UPI', 'Bank Transfer', 'Card'];
 
 const BUSINESS_OPTIONS = [
   { slug: 'tech', label: 'Rturox Technology' },
-  { slug: 'realestate', label: 'AadanaTharakar' },
+  { slug: 'realestate', label: 'DkProperties' },
   { slug: 'training', label: 'RturoxAcademy' },
-  { slug: 'coaching', label: 'CKS Tuition' }
+  { slug: 'coaching', label: 'AchieversNest' }
 ];
 
 const CATEGORY_ICONS: Record<string, React.FC<any>> = {
@@ -519,9 +519,9 @@ export const AdminDashboard: React.FC = () => {
                   <Tooltip content={customTooltipINR} />
                   <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
                   <Bar dataKey="Rturox Technology" stackId="a" fill="#6c63ff" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="AadanaTharakar" stackId="a" fill="#ff6b6b" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="DkProperties" stackId="a" fill="#ff6b6b" radius={[0, 0, 0, 0]} />
                   <Bar dataKey="RturoxAcademy" stackId="a" fill="#43e97b" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="CKS Tuition" stackId="a" fill="#f7b731" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="AchieversNest" stackId="a" fill="#f7b731" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
