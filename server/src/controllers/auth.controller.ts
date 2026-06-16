@@ -84,7 +84,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = process.env.NODE_ENV === 'production' || req.headers.origin?.includes('vercel.app');
 
     // 6. Set secure httpOnly cookies
     res.cookie('access_token', accessToken, {
@@ -180,7 +180,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
     const newAccessToken = generateAccessToken(newPayload);
 
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = process.env.NODE_ENV === 'production' || req.headers.origin?.includes('vercel.app');
     res.cookie('access_token', newAccessToken, {
       httpOnly: true,
       secure: isProduction,
