@@ -8,8 +8,16 @@ import { logActivity } from '../utils/activityLogger';
 // ADMIN GLOBAL OVERVIEW
 // ==========================================
 
+let cachedOverview: any = null;
+let overviewCacheTime = 0;
+const CACHE_TTL = 30000; // 30 seconds
+
 export const getAdminOverview = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    if (cachedOverview && Date.now() - overviewCacheTime < CACHE_TTL) {
+      return res.status(200).json({ success: true, data: cachedOverview });
+    }
+
     // 1. Get all businesses
     const businesses = await prisma.business.findMany({
       where: { deletedAt: null },
@@ -138,14 +146,17 @@ export const getAdminOverview = async (req: AuthenticatedRequest, res: Response,
       };
     });
 
+    cachedOverview = {
+      grandTotalRevenue,
+      grandTotalPending,
+      grandTotalExpenses,
+      businessTiles
+    };
+    overviewCacheTime = Date.now();
+
     return res.status(200).json({
       success: true,
-      data: {
-        grandTotalRevenue,
-        grandTotalPending,
-        grandTotalExpenses,
-        businessTiles
-      }
+      data: cachedOverview
     });
   } catch (error) {
     next(error);
@@ -254,6 +265,10 @@ export const deleteUser = async (req: AuthenticatedRequest, res: Response, next:
       data: { deletedAt: new Date() }
     });
 
+    // Invalidate caches if users are deleted
+    cachedOverview = null;
+    cachedTrend = null;
+
     await logActivity(req.user?.userId || 'admin', 'Admin Panel', 'DELETE', `User Account: ${user.userId}`);
 
     return res.status(200).json({ success: true, message: 'User deleted successfully.' });
@@ -274,6 +289,10 @@ export const toggleBusinessStatus = async (req: AuthenticatedRequest, res: Respo
       where: { id: businessId },
       data: { isActive }
     });
+
+    // Invalidate caches on toggle
+    cachedOverview = null;
+    cachedTrend = null;
 
     await logActivity(
       req.user?.userId || 'admin',
@@ -341,6 +360,10 @@ export const resetBusinessData = async (req: AuthenticatedRequest, res: Response
       return res.status(400).json({ success: false, message: 'Invalid business slug.' });
     }
 
+    // Invalidate caches on reset
+    cachedOverview = null;
+    cachedTrend = null;
+
     await logActivity(req.user?.userId || 'admin', 'Admin Panel', 'DELETE', `RESET business database for slug: ${slug}`);
 
     return res.status(200).json({
@@ -368,8 +391,15 @@ export const getActivityLogs = async (req: AuthenticatedRequest, res: Response, 
   }
 };
 
+let cachedTrend: any = null;
+let trendCacheTime = 0;
+
 export const getConsolidatedRevenueTrend = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    if (cachedTrend && Date.now() - trendCacheTime < CACHE_TTL) {
+      return res.status(200).json({ success: true, data: cachedTrend });
+    }
+
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const currentYear = new Date().getFullYear();
 
@@ -429,9 +459,12 @@ export const getConsolidatedRevenueTrend = async (req: AuthenticatedRequest, res
       };
     });
 
+    cachedTrend = consolidatedTrend;
+    trendCacheTime = Date.now();
+
     return res.status(200).json({
       success: true,
-      data: consolidatedTrend
+      data: cachedTrend
     });
   } catch (error) {
     next(error);
