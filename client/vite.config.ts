@@ -13,7 +13,7 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern: /^https?:\/\/localhost:5001\/api\/v1\/.*/i,
-            handler: 'StaleWhileRevalidate',
+            handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
               expiration: {
@@ -27,7 +27,7 @@ export default defineConfig({
           },
           {
             urlPattern: /^https?:\/\/business-tracker-xi\.vercel\.app\/api\/v1\/.*/i,
-            handler: 'StaleWhileRevalidate',
+            handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache-prod',
               expiration: {
