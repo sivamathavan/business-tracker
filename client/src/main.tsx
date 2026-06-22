@@ -3,22 +3,27 @@ import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { registerSW } from 'virtual:pwa-register';
+import { toast } from 'react-hot-toast';
 
-// Force unregister old service workers that are causing stale data issues
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    for (let registration of registrations) {
-      registration.unregister();
-    }
-  });
-}
-
-const updateSW = registerSW({
+registerSW({
   onNeedRefresh() {
-    // We could show a toast here in the future
+    toast(
+      (t) => (
+        <span className="flex items-center gap-3 text-xs font-semibold">
+          App update available.
+          <button
+            onClick={() => { window.location.reload(); toast.dismiss(t.id); }}
+            className="px-2 py-1 rounded bg-indigo-600 text-white font-bold"
+          >
+            Refresh
+          </button>
+        </span>
+      ),
+      { duration: Infinity, id: 'sw-update' }
+    );
   },
   onOfflineReady() {
-    // PWA is ready to work offline
+    toast.success('App ready for offline use.', { duration: 3000 });
   },
 });
 

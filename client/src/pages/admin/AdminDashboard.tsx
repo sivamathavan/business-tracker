@@ -1,15 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { 
-  TrendingUp, Users, ShieldAlert, Cpu, Home, 
-  GraduationCap, Sparkles, RefreshCw, Key, ToggleLeft, 
+import {
+  TrendingUp, Users, Cpu, Home,
+  GraduationCap, Sparkles, RefreshCw, Key, ToggleLeft,
   ToggleRight, Trash2, UserPlus, FileText, Database, Search,
-  Wallet, Plus, Edit2, Filter, CalendarDays, Receipt,
-  PieChart as PieChartIcon, BarChart2, ArrowDownRight, ArrowUpRight,
-  IndianRupee, Fuel, Wifi, Zap, UtensilsCrossed, Car, Package, Megaphone, Monitor, MoreHorizontal
+  Wallet, BarChart2, ArrowDownRight, ArrowUpRight
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RePie, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useSyncRefresh } from '../../hooks/useSyncRefresh';
 import apiClient from '../../api/apiClient';
 import { RevenueHeroCard } from '../../components/ui/RevenueHeroCard';
 import { formatINR, formatDateStr } from '../../utils/formatters';
@@ -51,56 +49,6 @@ interface ActivityLog {
   timestamp: string;
 }
 
-interface Expense {
-  id: string;
-  business_slug: string;
-  category: string;
-  amount: number;
-  description: string | null;
-  date: string;
-  payment_mode: string | null;
-  notes: string | null;
-  created_by: string;
-  created_at: string;
-}
-
-// Expense categories with icons
-const EXPENSE_CATEGORIES = [
-  'Petrol', 'Rent', 'WiFi', 'Electricity', 'Salary', 
-  'Food', 'Travel', 'Office Supplies', 'Marketing', 'Software', 'Other'
-];
-
-const PAYMENT_MODES = ['Cash', 'UPI', 'Bank Transfer', 'Card'];
-
-const CATEGORY_ICONS: Record<string, React.FC<any>> = {
-  Petrol: Fuel,
-  Rent: Home,
-  WiFi: Wifi,
-  Electricity: Zap,
-  Salary: Users,
-  Food: UtensilsCrossed,
-  Travel: Car,
-  'Office Supplies': Package,
-  Marketing: Megaphone,
-  Software: Monitor,
-  Other: MoreHorizontal
-};
-
-const CATEGORY_COLORS: Record<string, string> = {
-  Petrol: 'text-orange-400',
-  Rent: 'text-blue-400',
-  WiFi: 'text-cyan-400',
-  Electricity: 'text-yellow-400',
-  Salary: 'text-purple-400',
-  Food: 'text-green-400',
-  Travel: 'text-pink-400',
-  'Office Supplies': 'text-slate-400',
-  Marketing: 'text-red-400',
-  Software: 'text-indigo-400',
-  Other: 'text-slate-500'
-};
-
-const PIE_COLORS = ['#f97316', '#3b82f6', '#06b6d4', '#eab308', '#a855f7', '#22c55e', '#ec4899', '#64748b', '#ef4444', '#6366f1', '#94a3b8'];
 
 export const AdminDashboard: React.FC = () => {
   // Admin tab state
@@ -118,24 +66,6 @@ export const AdminDashboard: React.FC = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Expense states
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [expenseSummary, setExpenseSummary] = useState<any>(null);
-  const [expenseLoading, setExpenseLoading] = useState(false);
-  const [expenseSlugFilter, setExpenseSlugFilter] = useState('');
-  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('');
-  const [expenseMonthFilter, setExpenseMonthFilter] = useState('');
-  const [expenseSpentByFilter, setExpenseSpentByFilter] = useState('');
-  const [expenseSearch, setExpenseSearch] = useState('');
-  const [expenseModal, setExpenseModal] = useState<{ open: boolean; editRecord: Expense | null }>({ open: false, editRecord: null });
-
-  // Custom category input state
-  const [customCategory, setCustomCategory] = useState('');
-  const [showCustomCategory, setShowCustomCategory] = useState(false);
-
-  // Forms
-  const { register, handleSubmit, reset, setValue, watch } = useForm();
-  
   // Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
@@ -194,38 +124,12 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const fetchExpenses = async () => {
-    setExpenseLoading(true);
-    try {
-      const params: any = {};
-      if (expenseSlugFilter) params.slug = expenseSlugFilter;
-      if (expenseCategoryFilter) params.category = expenseCategoryFilter;
-      if (expenseMonthFilter) params.month = expenseMonthFilter;
-      if (expenseSpentByFilter) params.spent_by = expenseSpentByFilter;
-
-      const [listRes, summaryRes] = await Promise.all([
-        apiClient.get('/expenses', { params }),
-        apiClient.get('/expenses/summary/all', { params })
-      ]);
-
-      if (listRes.data.success) setExpenses(listRes.data.data);
-      if (summaryRes.data.success) setExpenseSummary(summaryRes.data.data);
-    } catch (e) {
-      toast.error('Failed to load expenses.');
-    } finally {
-      setExpenseLoading(false);
-    }
-  };
+  const refreshAll = useCallback(() => fetchData(), []);
+  useSyncRefresh(refreshAll);
 
   useEffect(() => {
     fetchData();
   }, []);
-
-  useEffect(() => {
-    if (activeTab === 'expenses') {
-      fetchExpenses();
-    }
-  }, [activeTab, expenseSlugFilter, expenseCategoryFilter, expenseMonthFilter, expenseSpentByFilter]);
 
   // --- OVERVIEW HANDLERS ---
 
@@ -323,84 +227,6 @@ export const AdminDashboard: React.FC = () => {
         }
       }
     });
-  };
-
-  // --- EXPENSE HANDLERS ---
-
-  const handleDeleteExpense = async (id: string) => {
-    setConfirmModal({
-      open: true,
-      title: 'Delete Expense',
-      message: 'Delete this expense record?',
-      danger: true,
-      onConfirm: async () => {
-        setConfirmModal(m => ({ ...m, open: false }));
-        try {
-          const res = await apiClient.delete(`/admin/expenses/${id}`);
-          if (res.data.success) {
-            toast.success('Expense deleted successfully.');
-            fetchExpenses();
-          }
-        } catch (e) {
-          toast.error('Failed to delete expense.');
-        }
-      }
-    });
-  };
-
-  const handleCreateExpense = async (data: any) => {
-    try {
-      const finalCategory = showCustomCategory && customCategory.trim()
-        ? customCategory.trim()
-        : data.category;
-
-      if (!finalCategory) {
-        toast.error('Please select or type an expense category.');
-        return;
-      }
-
-      const payload = {
-        ...data,
-        category: finalCategory,
-        amount: Number(data.amount || 0)
-      };
-
-      let res;
-      if (expenseModal.editRecord) {
-        res = await apiClient.put(`/expenses/${expenseModal.editRecord.id}`, payload);
-      } else {
-        res = await apiClient.post('/expenses', payload);
-      }
-
-      if (res.data.success) {
-        toast.success(expenseModal.editRecord ? 'Expense updated!' : 'Expense added!');
-        setExpenseModal({ open: false, editRecord: null });
-        setCustomCategory('');
-        setShowCustomCategory(false);
-        reset();
-        fetchExpenses();
-        fetchData();
-      }
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || 'Failed to save expense.');
-    }
-  };
-
-  const openEditExpenseModal = (exp: Expense) => {
-    const isCustom = !EXPENSE_CATEGORIES.includes(exp.category);
-    setShowCustomCategory(isCustom);
-    setCustomCategory(isCustom ? exp.category : '');
-    
-    reset({
-      business_slug: exp.business_slug,
-      category: isCustom ? '' : exp.category,
-      amount: Number(exp.amount),
-      description: exp.description || '',
-      date: exp.date ? exp.date.split('T')[0] : '',
-      payment_mode: exp.payment_mode || '',
-      notes: exp.notes || ''
-    });
-    setExpenseModal({ open: true, editRecord: exp });
   };
 
   // --- BACKUP & RESTORE ---
@@ -550,7 +376,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
         
         <button
-          onClick={() => { fetchData(); if (activeTab === 'expenses') fetchExpenses(); }}
+          onClick={fetchData}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 transition-all duration-200"
         >
           <RefreshCw className="w-4 h-4" />
@@ -968,9 +794,18 @@ export const AdminDashboard: React.FC = () => {
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
                     <button className="w-full py-3 rounded-xl font-bold text-sm bg-rose-950/40 hover:bg-rose-900/60 border border-rose-900/50 text-rose-400 transition-all pointer-events-none">
-                      Select Backup File to Restore
+                      {selectedFile ? selectedFile.name : 'Select Backup File to Restore'}
                     </button>
                   </div>
+                  {selectedFile && (
+                    <button
+                      onClick={handleRestore}
+                      disabled={isRestoring}
+                      className="w-full py-3 mt-3 rounded-xl font-bold text-sm bg-rose-600 hover:bg-rose-500 disabled:opacity-60 text-white transition-all"
+                    >
+                      {isRestoring ? 'Restoring database...' : 'Restore from Selected File'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

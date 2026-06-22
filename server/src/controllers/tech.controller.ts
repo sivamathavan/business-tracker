@@ -380,7 +380,8 @@ export const getTechAnalytics = async (req: AuthenticatedRequest, res: Response,
     }
 
     const isWithinFilter = (d: Date | string | null | undefined) => {
-      if (!filterStart || !filterEnd || !d) return true;
+      if (!filterStart || !filterEnd) return true;
+      if (!d) return false; // exclude dateless records when a filter is active
       const date = new Date(d);
       return date >= filterStart && date < filterEnd;
     };

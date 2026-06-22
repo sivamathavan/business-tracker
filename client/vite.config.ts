@@ -12,16 +12,18 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
+            // API calls — NetworkFirst: always try network, fall back to SW cache only when offline
             urlPattern: /^https?:\/\/localhost:5001\/api\/v1\/.*/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'api-cache',
+              cacheName: 'api-cache-dev',
+              networkTimeoutSeconds: 10,
               expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 24 * 60 * 60 // 24 hours
+                maxEntries: 50,
+                maxAgeSeconds: 60 // 60s offline fallback — data stays fresh
               },
               cacheableResponse: {
-                statuses: [0, 200]
+                statuses: [200]
               }
             }
           },
@@ -30,12 +32,13 @@ export default defineConfig({
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache-prod',
+              networkTimeoutSeconds: 10,
               expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 24 * 60 * 60 // 24 hours
+                maxEntries: 50,
+                maxAgeSeconds: 60
               },
               cacheableResponse: {
-                statuses: [0, 200]
+                statuses: [200]
               }
             }
           }
@@ -48,10 +51,18 @@ export default defineConfig({
         theme_color: "#0a0a0f",
         background_color: "#0a0a0f",
         display: "standalone",
+        scope: "/",
+        start_url: "/",
         icons: [
           {
             src: "/favicon.png",
             sizes: "128x128",
+            type: "image/png",
+            purpose: "any"
+          },
+          {
+            src: "/logo.png",
+            sizes: "192x192",
             type: "image/png",
             purpose: "any"
           },

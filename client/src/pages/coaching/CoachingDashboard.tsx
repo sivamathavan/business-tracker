@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import { 
@@ -15,6 +15,7 @@ import { generateFeeReceipt } from '../../utils/pdfGenerator';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { WhatsAppButton } from '../../components/ui/WhatsAppButton';
 import { ExpensesTab } from '../../components/ui/ExpensesTab';
+import { useSyncRefresh } from '../../hooks/useSyncRefresh';
 
 // ==========================================
 // INTERFACES
@@ -230,6 +231,9 @@ export const CoachingDashboard: React.FC = () => {
     fetchOverdueBackground();
     return () => { isMounted = false; };
   }, []);
+
+  const refreshAll = useCallback(() => fetchData(), []);
+  useSyncRefresh(refreshAll);
 
   // Lazy load by tab — 'dashboard' is excluded because the boot effect always fetches it
   useEffect(() => {
@@ -530,10 +534,12 @@ export const CoachingDashboard: React.FC = () => {
   // Bulk marks entry submission
   const handleSaveMarksheet = async () => {
     if (!selectedExamForMarks) return;
-    const scores = examMarksheet.map(item => ({
-      student_id: item.student_id,
-      marks_scored: Number(item.marks_scored || 0)
-    }));
+    const scores = examMarksheet
+      .filter(item => item.marks_scored !== null && item.marks_scored !== '')
+      .map(item => ({
+        student_id: item.student_id,
+        marks_scored: Number(item.marks_scored)
+      }));
 
     try {
       const res = await apiClient.post(`/coaching/exams/${selectedExamForMarks.exam_id}/marksheet`, { scores });

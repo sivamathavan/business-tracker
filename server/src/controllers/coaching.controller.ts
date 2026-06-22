@@ -10,24 +10,31 @@ import { cleanMobile } from './auth.controller';
 
 export const getCoachingStudents = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const students = await prisma.coachingStudent.findMany({
-      where: { deleted_at: null },
-      orderBy: { created_at: 'desc' },
-      include: { CoachingAttendance: true }
-    });
+    const [students, presentCounts, totalCounts] = await Promise.all([
+      prisma.coachingStudent.findMany({
+        where: { deleted_at: null },
+        orderBy: { created_at: 'desc' }
+      }),
+      prisma.coachingAttendance.groupBy({
+        by: ['student_id'],
+        where: { deleted_at: null, status: 'Present' },
+        _count: { student_id: true }
+      }),
+      prisma.coachingAttendance.groupBy({
+        by: ['student_id'],
+        where: { deleted_at: null },
+        _count: { student_id: true }
+      })
+    ]);
+
+    const presentMap = new Map(presentCounts.map(r => [r.student_id, r._count.student_id]));
+    const totalMap = new Map(totalCounts.map(r => [r.student_id, r._count.student_id]));
 
     const studentsWithAttendance = students.map(student => {
-      const records = student.CoachingAttendance;
-      let attendance_percentage = 0;
-      
-      if (records && records.length > 0) {
-        const presentCount = records.filter(r => r.status === 'Present').length;
-        attendance_percentage = Math.round((presentCount / records.length) * 100);
-      }
-
-      // Remove the raw array from response to save bandwidth
-      const { CoachingAttendance, ...rest } = student;
-      return { ...rest, attendance_percentage };
+      const present = presentMap.get(student.student_id) || 0;
+      const total = totalMap.get(student.student_id) || 0;
+      const attendance_percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+      return { ...student, attendance_percentage };
     });
 
     return res.status(200).json({ success: true, data: studentsWithAttendance });
@@ -61,8 +68,8 @@ export const createCoachingStudent = async (req: AuthenticatedRequest, res: Resp
       notes
     } = req.body;
 
-    // Use whatsapp_number or phone_number as the primary contact for backward compat
-    const primaryMobile = whatsapp_number || phone_number || parent_mobile;
+    // whatsapp_number takes priority for WA reminders; fall back to phone_number, then parent_mobile
+    const primaryMobile = whatsapp_number || phone_number || parent_mobile || student_mobile;
 
     const student = await prisma.coachingStudent.create({
       data: {
@@ -525,29 +532,41 @@ export const saveBulkExamResults = async (req: AuthenticatedRequest, res: Respon
     const exam = await prisma.coachingExam.findUnique({ where: { exam_id: examId } });
     if (!exam) return res.status(404).json({ success: false, message: 'Exam template not found' });
 
-    for (const item of scores) {
-      const existing = await prisma.coachingResult.findFirst({
-        where: { exam_id: examId, student_id: item.student_id, deleted_at: null }
-      });
+    // Pre-fetch all existing results in one query instead of N individual lookups
+    const existingResults = await prisma.coachingResult.findMany({
+      where: { exam_id: examId, deleted_at: null },
+      select: { result_id: true, student_id: true }
+    });
+    const existingMap = new Map(existingResults.map(r => [r.student_id, r.result_id]));
 
-      if (existing) {
-        await prisma.coachingResult.update({
-          where: { result_id: existing.result_id },
-          data: {
-            marks_scored: Number(item.marks_scored),
-          }
-        });
+    const toCreate: { exam_id: string; student_id: string; marks_scored: number; created_by: string }[] = [];
+    const toUpdate: { result_id: string; marks_scored: number }[] = [];
+
+    for (const item of scores) {
+      const existingId = existingMap.get(item.student_id);
+      if (existingId) {
+        toUpdate.push({ result_id: existingId, marks_scored: Number(item.marks_scored) });
       } else {
-        await prisma.coachingResult.create({
-          data: {
-            exam_id: examId,
-            student_id: item.student_id,
-            marks_scored: Number(item.marks_scored),
-            created_by: req.user?.userId || 'system'
-          }
+        toCreate.push({
+          exam_id: examId,
+          student_id: item.student_id,
+          marks_scored: Number(item.marks_scored),
+          created_by: req.user?.userId || 'system'
         });
       }
     }
+
+    await Promise.all([
+      toCreate.length > 0 ? prisma.coachingResult.createMany({ data: toCreate }) : Promise.resolve(),
+      toUpdate.length > 0 ? prisma.$transaction(
+        toUpdate.map(item =>
+          prisma.coachingResult.update({
+            where: { result_id: item.result_id },
+            data: { marks_scored: item.marks_scored }
+          })
+        )
+      ) : Promise.resolve()
+    ]);
 
     await logActivity(req.user?.userId || 'system', 'AchieversNest', 'UPDATE', `Exam scores saved for: ${exam.exam_name} (${exam.standard})`);
 
@@ -998,7 +1017,7 @@ export const getCoachingDashboardSummary = async (req: AuthenticatedRequest, res
       .reduce((sum, r) => sum + Number(r.fee_amount), 0);
       
     // Collection % — returned as a number, not a string
-    const collectionPercentage = billedToDate > 0 ? Number(((totalCollected / billedToDate) * 100).toFixed(1)) : 0;
+    const collectionPercentage = billedToDate > 0 ? Number(((totalCollected / billedToDate) * 100).toFixed(2)) : 0;
 
     // By Standard — build a lookup map to avoid O(N*M) scans
     const studentMap = new Map(students.map(s => [s.student_id, s]));

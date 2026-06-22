@@ -4,9 +4,8 @@ import { useAuthStore } from '../store/authStore';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api/v1';
 
 // ─── Simple In-Memory GET Cache (30s TTL) ───────────────────────────────────
-// Prevents redundant API calls when switching tabs or re-rendering components
 const cache = new Map<string, { data: any; expiry: number }>();
-const CACHE_TTL = 30_000; // 30 seconds
+const CACHE_TTL = 30_000;
 
 export const clearApiCache = () => cache.clear();
 
@@ -19,12 +18,27 @@ const getCached = (key: string) => {
 
 const setCache = (key: string, data: any) =>
   cache.set(key, { data, expiry: Date.now() + CACHE_TTL });
+
+// ─── BroadcastChannel: instant cross-tab data sync ──────────────────────────
+// When any tab makes a mutation, all other open tabs hear about it and can refresh.
+const syncChannel = typeof BroadcastChannel !== 'undefined'
+  ? new BroadcastChannel('tracker_data_sync')
+  : null;
+
+export const onDataSync = (handler: () => void) => {
+  if (!syncChannel) return () => {};
+  const listener = (e: MessageEvent) => {
+    if (e.data?.type === 'DATA_CHANGED') handler();
+  };
+  syncChannel.addEventListener('message', listener);
+  return () => syncChannel.removeEventListener('message', listener);
+};
 // ────────────────────────────────────────────────────────────────────────────
 
 const apiClient = axios.create({
   baseURL: API_URL,
   withCredentials: true,
-  timeout: 15_000, // 15s timeout — prevents hung requests on cold starts
+  timeout: 15_000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -42,17 +56,14 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Handle 401 Unauthorized (Auto Refresh JWT)
+// Response Interceptor: Cache GETs, clear cache + broadcast on mutations, handle 401
 let isRefreshing = false;
 let failedQueue: any[] = [];
 
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
+    if (error) prom.reject(error);
+    else prom.resolve(token);
   });
   failedQueue = [];
 };
@@ -60,20 +71,20 @@ const processQueue = (error: any, token: string | null = null) => {
 apiClient.interceptors.response.use(
   (response) => {
     const method = response.config.method?.toLowerCase();
-    if (method === 'get' && response.config.url) {
-      // Cache successful GET responses for 30s
+    if (method === 'get' && response.config.url && response.data?.success !== false) {
+      // Only cache successful responses (not error payloads)
       const cacheKey = `${response.config.url}${JSON.stringify(response.config.params || {})}`;
       setCache(cacheKey, response.data);
     } else if (['post', 'put', 'delete', 'patch'].includes(method || '')) {
-      // Invalidate entire cache on any mutation
+      // Invalidate local cache and notify all other tabs instantly
       cache.clear();
+      syncChannel?.postMessage({ type: 'DATA_CHANGED', timestamp: Date.now() });
     }
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
-    
-    // Check if error is 401 and not already retrying
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (originalRequest.url === '/auth/login' || originalRequest.url === '/auth/refresh') {
         return Promise.reject(error);
@@ -87,16 +98,13 @@ apiClient.interceptors.response.use(
             originalRequest.headers.Authorization = `Bearer ${token}`;
             return apiClient(originalRequest);
           })
-          .catch((err) => {
-            return Promise.reject(err);
-          });
+          .catch((err) => Promise.reject(err));
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
       try {
-        // Trigger silent token refresh
         const refreshResponse = await axios.post(
           `${API_URL}/auth/refresh`,
           {},
@@ -106,10 +114,8 @@ apiClient.interceptors.response.use(
         if (refreshResponse.data.success) {
           const newToken = refreshResponse.data.accessToken;
           useAuthStore.getState().setToken(newToken);
-          
           processQueue(null, newToken);
           isRefreshing = false;
-
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
           return apiClient(originalRequest);
         }
@@ -128,8 +134,6 @@ apiClient.interceptors.response.use(
 export default apiClient;
 
 // ─── Cached GET Helper ───────────────────────────────────────────────────────
-// Usage: const data = await cachedGet('/admin/overview');
-// Serves from 30s in-memory cache on repeat calls, network on first/expired.
 export const cachedGet = async (url: string, params?: object) => {
   const cacheKey = `${url}${JSON.stringify(params || {})}`;
   const hit = getCached(cacheKey);

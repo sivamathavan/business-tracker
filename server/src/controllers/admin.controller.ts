@@ -10,7 +10,16 @@ import { logActivity } from '../utils/activityLogger';
 
 let cachedOverview: any = null;
 let overviewCacheTime = 0;
+let cachedTrend: any = null;
+let trendCacheTime = 0;
 const CACHE_TTL = 30000; // 30 seconds
+
+const invalidateCaches = () => {
+  cachedOverview = null;
+  cachedTrend = null;
+  overviewCacheTime = 0;
+  trendCacheTime = 0;
+};
 
 export const getAdminOverview = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
@@ -265,9 +274,7 @@ export const deleteUser = async (req: AuthenticatedRequest, res: Response, next:
       data: { deletedAt: new Date() }
     });
 
-    // Invalidate caches if users are deleted
-    cachedOverview = null;
-    cachedTrend = null;
+    invalidateCaches();
 
     await logActivity(req.user?.userId || 'admin', 'Admin Panel', 'DELETE', `User Account: ${user.userId}`);
 
@@ -290,9 +297,7 @@ export const toggleBusinessStatus = async (req: AuthenticatedRequest, res: Respo
       data: { isActive }
     });
 
-    // Invalidate caches on toggle
-    cachedOverview = null;
-    cachedTrend = null;
+    invalidateCaches();
 
     await logActivity(
       req.user?.userId || 'admin',
@@ -360,9 +365,7 @@ export const resetBusinessData = async (req: AuthenticatedRequest, res: Response
       return res.status(400).json({ success: false, message: 'Invalid business slug.' });
     }
 
-    // Invalidate caches on reset
-    cachedOverview = null;
-    cachedTrend = null;
+    invalidateCaches();
 
     await logActivity(req.user?.userId || 'admin', 'Admin Panel', 'DELETE', `RESET business database for slug: ${slug}`);
 
@@ -391,9 +394,6 @@ export const getActivityLogs = async (req: AuthenticatedRequest, res: Response, 
     next(error);
   }
 };
-
-let cachedTrend: any = null;
-let trendCacheTime = 0;
 
 export const getConsolidatedRevenueTrend = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
@@ -641,14 +641,16 @@ export const importRestore = async (req: AuthenticatedRequest, res: Response, ne
     // Wrap the entire restore in a transaction
     // Important: we delete in an order that respects foreign keys (if any), then create.
     await prisma.$transaction(async (tx) => {
-      // 1. Delete all existing data
+      // 1. Delete all existing data (children before parents)
       await tx.activityLog.deleteMany();
       await tx.coachingFeeRecord.deleteMany();
       await tx.coachingAttendance.deleteMany();
-      // CoachingEnrollment and Result if exist? (Checked schema earlier, there are CoachingEnrollments)
-      if (tx.coachingEnrollment) await tx.coachingEnrollment.deleteMany();
-      if (tx.coachingResult) await tx.coachingResult.deleteMany();
+      await tx.coachingResult.deleteMany();
+      await tx.coachingEnrollment.deleteMany();
       await tx.coachingStudent.deleteMany();
+      await tx.coachingExam.deleteMany();
+      await tx.coachingBatch.deleteMany();
+      await tx.coachingStaff.deleteMany();
 
       await tx.trainingAttendance.deleteMany();
       await tx.trainingFeeInstallment.deleteMany();
@@ -699,13 +701,15 @@ export const importRestore = async (req: AuthenticatedRequest, res: Response, ne
       if (backup.TrainingFeeInstallment && backup.TrainingFeeInstallment.length > 0) await tx.trainingFeeInstallment.createMany({ data: backup.TrainingFeeInstallment });
       if (backup.TrainingAttendance && backup.TrainingAttendance.length > 0) await tx.trainingAttendance.createMany({ data: backup.TrainingAttendance });
 
-      if (backup.CoachingStudent && backup.CoachingStudent.length > 0) await tx.coachingStudent.createMany({ data: backup.CoachingStudent });
-      // Restore CoachingEnrollment and Result if exist in payload (not explicitly gathered but good to have safety)
-      if (backup.CoachingEnrollment && backup.CoachingEnrollment.length > 0) await tx.coachingEnrollment.createMany({ data: backup.CoachingEnrollment });
-      if (backup.CoachingResult && backup.CoachingResult.length > 0) await tx.coachingResult.createMany({ data: backup.CoachingResult });
-      
-      if (backup.CoachingAttendance && backup.CoachingAttendance.length > 0) await tx.coachingAttendance.createMany({ data: backup.CoachingAttendance });
-      if (backup.CoachingFeeRecord && backup.CoachingFeeRecord.length > 0) await tx.coachingFeeRecord.createMany({ data: backup.CoachingFeeRecord });
+      // Coaching — parents first, then children
+      if (backup.CoachingStudent?.length > 0) await tx.coachingStudent.createMany({ data: backup.CoachingStudent });
+      if (backup.CoachingStaff?.length > 0) await tx.coachingStaff.createMany({ data: backup.CoachingStaff });
+      if (backup.CoachingBatch?.length > 0) await tx.coachingBatch.createMany({ data: backup.CoachingBatch });
+      if (backup.CoachingExam?.length > 0) await tx.coachingExam.createMany({ data: backup.CoachingExam });
+      if (backup.CoachingEnrollment?.length > 0) await tx.coachingEnrollment.createMany({ data: backup.CoachingEnrollment });
+      if (backup.CoachingResult?.length > 0) await tx.coachingResult.createMany({ data: backup.CoachingResult });
+      if (backup.CoachingAttendance?.length > 0) await tx.coachingAttendance.createMany({ data: backup.CoachingAttendance });
+      if (backup.CoachingFeeRecord?.length > 0) await tx.coachingFeeRecord.createMany({ data: backup.CoachingFeeRecord });
 
       if (backup.ActivityLog && backup.ActivityLog.length > 0) await tx.activityLog.createMany({ data: backup.ActivityLog });
     });
