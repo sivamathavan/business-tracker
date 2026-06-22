@@ -11,7 +11,8 @@ import {
   getActivityLogs,
   getConsolidatedRevenueTrend,
   exportBackup,
-  importRestore
+  importRestore,
+  globalSearch
 } from '../controllers/admin.controller';
 import { requireAuth, requireAdmin } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -80,7 +81,6 @@ router.get('/revenue', getConsolidatedRevenueTrend);
 
 
 // --- Global Cross-Business Search ---
-import { globalSearch } from '../controllers/admin.controller';
 router.get('/search', globalSearch);
 
 export default router;

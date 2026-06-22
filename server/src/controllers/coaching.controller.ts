@@ -142,30 +142,44 @@ export const updateCoachingStudent = async (req: AuthenticatedRequest, res: Resp
     const existing = await prisma.coachingStudent.findUnique({ where: { student_id: id } });
     if (!existing) return res.status(404).json({ success: false, message: 'Coaching student not found' });
 
-    const updated = await prisma.coachingStudent.update({
-      where: { student_id: id },
-      data: {
-        student_name: student_name || existing.student_name,
-        father_name: father_name !== undefined ? father_name : existing.father_name,
-        father_occupation: father_occupation !== undefined ? father_occupation : existing.father_occupation,
-        mother_name: mother_name !== undefined ? mother_name : existing.mother_name,
-        mother_occupation: mother_occupation !== undefined ? mother_occupation : existing.mother_occupation,
-        whatsapp_number: whatsapp_number !== undefined ? (whatsapp_number ? cleanMobile(whatsapp_number) : null) : existing.whatsapp_number,
-        phone_number: phone_number !== undefined ? (phone_number ? cleanMobile(phone_number) : null) : existing.phone_number,
-        parent_mobile: parent_mobile !== undefined ? (parent_mobile ? cleanMobile(parent_mobile) : null) : existing.parent_mobile,
-        student_mobile: student_mobile !== undefined ? (student_mobile ? cleanMobile(student_mobile) : null) : existing.student_mobile,
-        standard: standard || existing.standard,
-        section: section !== undefined ? section : existing.section,
-        school_name: school_name !== undefined ? school_name : existing.school_name,
-        medium: medium !== undefined ? medium : existing.medium,
-        board: board !== undefined ? board : existing.board,
-        department: department !== undefined ? department : existing.department,
-        subjects_enrolled: subjects_enrolled !== undefined ? (Array.isArray(subjects_enrolled) ? subjects_enrolled.join(',') : subjects_enrolled) : existing.subjects_enrolled,
-        enrollment_date: enrollment_date !== undefined ? (enrollment_date ? new Date(enrollment_date) : null) : existing.enrollment_date,
-        monthly_fee: monthly_fee !== undefined ? Number(monthly_fee) : existing.monthly_fee,
-        status: status || existing.status,
-        notes: notes !== undefined ? notes : existing.notes
+    const feeChanged = monthly_fee !== undefined && Number(monthly_fee) > 0 && Number(monthly_fee) !== Number(existing.monthly_fee);
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const record = await tx.coachingStudent.update({
+        where: { student_id: id },
+        data: {
+          student_name: student_name || existing.student_name,
+          father_name: father_name !== undefined ? father_name : existing.father_name,
+          father_occupation: father_occupation !== undefined ? father_occupation : existing.father_occupation,
+          mother_name: mother_name !== undefined ? mother_name : existing.mother_name,
+          mother_occupation: mother_occupation !== undefined ? mother_occupation : existing.mother_occupation,
+          whatsapp_number: whatsapp_number !== undefined ? (whatsapp_number ? cleanMobile(whatsapp_number) : null) : existing.whatsapp_number,
+          phone_number: phone_number !== undefined ? (phone_number ? cleanMobile(phone_number) : null) : existing.phone_number,
+          parent_mobile: parent_mobile !== undefined ? (parent_mobile ? cleanMobile(parent_mobile) : null) : existing.parent_mobile,
+          student_mobile: student_mobile !== undefined ? (student_mobile ? cleanMobile(student_mobile) : null) : existing.student_mobile,
+          standard: standard || existing.standard,
+          section: section !== undefined ? section : existing.section,
+          school_name: school_name !== undefined ? school_name : existing.school_name,
+          medium: medium !== undefined ? medium : existing.medium,
+          board: board !== undefined ? board : existing.board,
+          department: department !== undefined ? department : existing.department,
+          subjects_enrolled: subjects_enrolled !== undefined ? (Array.isArray(subjects_enrolled) ? subjects_enrolled.join(',') : subjects_enrolled) : existing.subjects_enrolled,
+          enrollment_date: enrollment_date !== undefined ? (enrollment_date ? new Date(enrollment_date) : null) : existing.enrollment_date,
+          monthly_fee: monthly_fee !== undefined ? Number(monthly_fee) : existing.monthly_fee,
+          status: status || existing.status,
+          notes: notes !== undefined ? notes : existing.notes
+        }
+      });
+
+      // Sync new fee amount to open records atomically; skip if fee is 0 (blank field guard)
+      if (feeChanged) {
+        await tx.coachingFeeRecord.updateMany({
+          where: { student_id: id, status: { in: ['Pending', 'Overdue'] }, deleted_at: null },
+          data: { fee_amount: Number(monthly_fee) }
+        });
       }
+
+      return record;
     });
 
     await logActivity(req.user?.userId || 'system', 'AchieversNest', 'UPDATE', `Coaching Student: ${updated.student_name}`);
@@ -182,10 +196,16 @@ export const deleteCoachingStudent = async (req: AuthenticatedRequest, res: Resp
     const student = await prisma.coachingStudent.findUnique({ where: { student_id: id } });
     if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
 
-    await prisma.coachingStudent.update({
-      where: { student_id: id },
-      data: { deleted_at: new Date() }
-    });
+    const now = new Date();
+
+    // Fix 1: Cascade soft-delete to all child records in a single atomic transaction
+    await prisma.$transaction([
+      prisma.coachingStudent.update({ where: { student_id: id }, data: { deleted_at: now } }),
+      prisma.coachingFeeRecord.updateMany({ where: { student_id: id, deleted_at: null }, data: { deleted_at: now } }),
+      prisma.coachingAttendance.updateMany({ where: { student_id: id, deleted_at: null }, data: { deleted_at: now } }),
+      prisma.coachingResult.updateMany({ where: { student_id: id, deleted_at: null }, data: { deleted_at: now } }),
+      prisma.coachingEnrollment.deleteMany({ where: { student_id: id } })
+    ]);
 
     await logActivity(req.user?.userId || 'system', 'AchieversNest', 'DELETE', `Coaching Student: ${student.student_name}`);
 
@@ -845,7 +865,8 @@ export const getCoachingAnalytics = async (req: AuthenticatedRequest, res: Respo
     }
 
     const isWithinFilter = (d: Date | string | null | undefined) => {
-      if (!filterStart || !filterEnd || !d) return true;
+      if (!filterStart || !filterEnd) return true;
+      if (!d) return false; // exclude dateless records when a filter is active
       const date = new Date(d);
       return date >= filterStart && date < filterEnd;
     };
@@ -939,6 +960,140 @@ export const getCoachingAnalytics = async (req: AuthenticatedRequest, res: Respo
   }
 };
 
+// --- Dashboard Summary ---
+export const getCoachingDashboardSummary = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const [students, feeRecords, staff] = await Promise.all([
+      prisma.coachingStudent.findMany({
+        where: { deleted_at: null },
+      }),
+      prisma.coachingFeeRecord.findMany({
+        where: { deleted_at: null },
+      }),
+      prisma.coachingStaff.findMany({
+        where: { deleted_at: null },
+      })
+    ]);
+
+    const activeStudents = students.filter(s => s.status === 'Active');
+    
+    // Key Metrics
+    const totalStudentsCount = students.length;
+    const activeStudentsCount = activeStudents.length;
+    
+    // Monthly Fee (full collection expected for active)
+    const monthlyFeeExpected = activeStudents.reduce((sum, s) => sum + Number(s.monthly_fee), 0);
+    
+    // Billed to Date (Total expected from all fee records ever created)
+    const billedToDate = feeRecords.reduce((sum, r) => sum + Number(r.fee_amount), 0);
+    
+    // Total Collected
+    const totalCollected = feeRecords
+      .filter(r => r.status === 'Paid')
+      .reduce((sum, r) => sum + Number(r.fee_amount), 0);
+      
+    // Total Outstanding
+    const totalOutstanding = feeRecords
+      .filter(r => r.status === 'Pending' || r.status === 'Overdue')
+      .reduce((sum, r) => sum + Number(r.fee_amount), 0);
+      
+    // Collection % — returned as a number, not a string
+    const collectionPercentage = billedToDate > 0 ? Number(((totalCollected / billedToDate) * 100).toFixed(1)) : 0;
+
+    // By Standard — build a lookup map to avoid O(N*M) scans
+    const studentMap = new Map(students.map(s => [s.student_id, s]));
+
+    const standardsObj: Record<string, any> = {};
+    // Seed slots from ALL students so inactive students' fee records are allocated
+    students.forEach(s => {
+      if (!standardsObj[s.standard]) {
+        standardsObj[s.standard] = { standard: s.standard, students: 0, billed: 0, collected: 0, due: 0 };
+      }
+    });
+    // Count only active students in the student column
+    activeStudents.forEach(s => {
+      standardsObj[s.standard].students += 1;
+    });
+
+    feeRecords.forEach(r => {
+      const student = studentMap.get(r.student_id);
+      if (student && standardsObj[student.standard]) {
+        standardsObj[student.standard].billed += Number(r.fee_amount);
+        if (r.status === 'Paid') {
+          standardsObj[student.standard].collected += Number(r.fee_amount);
+        } else {
+          standardsObj[student.standard].due += Number(r.fee_amount);
+        }
+      }
+    });
+    
+    // Ensure all standards 1-12 are present
+    const standardOrder = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
+    standardOrder.forEach(st => {
+      if (!standardsObj[st]) {
+        standardsObj[st] = { standard: st, students: 0, billed: 0, collected: 0, due: 0 };
+      }
+    });
+    const byStandard = Object.values(standardsObj).sort((a: any, b: any) => standardOrder.indexOf(a.standard) - standardOrder.indexOf(b.standard));
+
+    // By Medium — seed from all students, count only active
+    const mediumObj: Record<string, any> = {};
+    students.forEach(s => {
+      const med = s.medium || 'Unknown';
+      if (!mediumObj[med]) {
+        mediumObj[med] = { medium: med, students: 0, collected: 0, due: 0 };
+      }
+    });
+    activeStudents.forEach(s => {
+      const med = s.medium || 'Unknown';
+      mediumObj[med].students += 1;
+    });
+
+    feeRecords.forEach(r => {
+      const student = studentMap.get(r.student_id);
+      if (student) {
+        const med = student.medium || 'Unknown';
+        if (mediumObj[med]) {
+          if (r.status === 'Paid') {
+            mediumObj[med].collected += Number(r.fee_amount);
+          } else {
+            mediumObj[med].due += Number(r.fee_amount);
+          }
+        }
+      }
+    });
+    const byMedium = Object.values(mediumObj);
+
+    // Staff & Salary
+    const activeStaff = staff.filter(s => s.status === 'Active');
+    const totalStaffCount = activeStaff.length;
+    const monthlySalaryFull = activeStaff.reduce((sum, s) => sum + Number(s.monthly_salary), 0);
+
+    return res.status(200).json({
+      success: true,
+      dashboard: {
+        keyMetrics: {
+          totalStudents: totalStudentsCount,
+          activeStudents: activeStudentsCount,
+          monthlyFeeExpected,
+          billedToDate,
+          totalCollected,
+          totalOutstanding,
+          collectionPercentage
+        },
+        byStandard,
+        byMedium,
+        staffSalary: {
+          totalStaff: totalStaffCount,
+          monthlySalaryFull
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // --- Auto Monthly Fee Generation ---
 export const autoGenerateMonthlyFees = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
@@ -951,31 +1106,30 @@ export const autoGenerateMonthlyFees = async (req: AuthenticatedRequest, res: Re
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const targetMonthYear = monthYear || `${months[now.getMonth()]} ${now.getFullYear()}`;
 
-    let generatedCount = 0;
+    // Fetch all existing records for this month in one query, then bulk-create missing ones
+    const existingRecords = await prisma.coachingFeeRecord.findMany({
+      where: {
+        month_year: targetMonthYear,
+        deleted_at: null,
+        student_id: { in: activeStudents.map(s => s.student_id) }
+      },
+      select: { student_id: true }
+    });
+    const alreadyHasFee = new Set(existingRecords.map(r => r.student_id));
 
-    for (const student of activeStudents) {
-      // Check if a fee record already exists for this student and this month
-      const existing = await prisma.coachingFeeRecord.findFirst({
-        where: {
-          student_id: student.student_id,
+    const toCreate = activeStudents.filter(s => !alreadyHasFee.has(s.student_id));
+    if (toCreate.length > 0) {
+      await prisma.coachingFeeRecord.createMany({
+        data: toCreate.map(s => ({
+          student_id: s.student_id,
           month_year: targetMonthYear,
-          deleted_at: null
-        }
+          fee_amount: s.monthly_fee,
+          status: 'Pending',
+          created_by: 'system_auto'
+        }))
       });
-
-      if (!existing) {
-        await prisma.coachingFeeRecord.create({
-          data: {
-            student_id: student.student_id,
-            month_year: targetMonthYear,
-            fee_amount: student.monthly_fee,
-            status: 'Pending',
-            created_by: 'system_auto'
-          }
-        });
-        generatedCount++;
-      }
     }
+    const generatedCount = toCreate.length;
 
     await logActivity('system_auto', 'AchieversNest', 'CREATE', `Auto-generated ${generatedCount} fee records for ${targetMonthYear}`);
 

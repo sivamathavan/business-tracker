@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import { 
   Plus, Search, Edit2, Trash2, Calendar, CalendarDays, User, DollarSign, 
   FileText, BarChart2, Sparkles, BookOpen, Clock, Users, ShieldAlert,
-  Percent, AlertTriangle, Printer, Check, Award, Phone, Wallet, GraduationCap, ClipboardList, RefreshCw
+  Percent, AlertTriangle, Printer, Check, Phone, Wallet, GraduationCap, ClipboardList, RefreshCw
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RePie, Pie, Cell } from 'recharts';
 import apiClient from '../../api/apiClient';
@@ -14,7 +14,6 @@ import { exportToCSV, exportToPDF } from '../../utils/exportHelpers';
 import { generateFeeReceipt } from '../../utils/pdfGenerator';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { WhatsAppButton } from '../../components/ui/WhatsAppButton';
-import { RevenueHeroCard } from '../../components/ui/RevenueHeroCard';
 import { ExpensesTab } from '../../components/ui/ExpensesTab';
 
 // ==========================================
@@ -92,15 +91,18 @@ interface Exam {
 }
 
 export const CoachingDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'students' | 'fees' | 'batches' | 'staff' | 'exams' | 'analytics' | 'attendance' | 'expenses'>('students');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'fees' | 'staff' | 'analytics' | 'expenses' | 'attendance' | 'exams'>('dashboard');
 
   // Data States
+  const [dashboardSummary, setDashboardSummary] = useState<any>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
   const [growthRate, setGrowthRate] = useState<number | null>(null);
+  
+  const [isSaving, setIsSaving] = useState(false);
 
   // Analytics Filter States
   const [analyticsDateType, setAnalyticsDateType] = useState<'lifetime' | 'month' | 'range'>('lifetime');
@@ -221,7 +223,7 @@ export const CoachingDashboard: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
-    Promise.all([fetchStudents(), fetchAnalytics()]).finally(() => {
+    Promise.all([fetchDashboardSummary(), fetchStudents(), fetchAnalytics()]).finally(() => {
       if (isMounted) setLoading(false);
     });
     // Silent background load
@@ -229,18 +231,27 @@ export const CoachingDashboard: React.FC = () => {
     return () => { isMounted = false; };
   }, []);
 
-  // Lazy load by tab
+  // Lazy load by tab — 'dashboard' is excluded because the boot effect always fetches it
   useEffect(() => {
-    if (activeTab === 'students') fetchStudents();
+    if (activeTab === 'students' || activeTab === 'attendance') fetchStudents();
     else if (activeTab === 'staff') fetchStaff();
-    else if (activeTab === 'batches') fetchBatches();
     else if (activeTab === 'exams') fetchExams();
-    else if (activeTab === 'attendance') fetchAttendance(attendanceDate);
-  }, [activeTab, attendanceDate]);
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'analytics') fetchAnalytics();
   }, [activeTab, analyticsDateType, analyticsMonthFilter, analyticsStartDate, analyticsEndDate]);
+
+  const fetchDashboardSummary = async () => {
+    try {
+      const res = await apiClient.get('/coaching/dashboard-summary');
+      if (res.data.success) {
+        setDashboardSummary(res.data.dashboard);
+      }
+    } catch (e) {
+      console.error('Failed to load dashboard summary');
+    }
+  };
 
   const fetchAnalytics = async () => {
     try {
@@ -375,6 +386,8 @@ export const CoachingDashboard: React.FC = () => {
 
   // --- SAVE FORM SUBMITS ---
   const handleStudentSubmit = async (data: any) => {
+    if (isSaving) { toast.error('Save already in progress, please wait.'); return; }
+    setIsSaving(true);
     try {
       const payload = {
         ...data,
@@ -390,14 +403,18 @@ export const CoachingDashboard: React.FC = () => {
       if (res.data.success) {
         toast.success('Student record saved.');
         setStudentModal({ open: false, editRecord: null });
-        fetchData();
+        fetchData(); // run in background
       }
     } catch (e) {
       toast.error('Failed to save student.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleStaffSubmit = async (data: any) => {
+    if (isSaving) { toast.error('Save already in progress, please wait.'); return; }
+    setIsSaving(true);
     try {
       const payload = {
         ...data,
@@ -413,14 +430,18 @@ export const CoachingDashboard: React.FC = () => {
       if (res.data.success) {
         toast.success('Staff record saved.');
         setStaffModal({ open: false, editRecord: null });
-        fetchData();
+        fetchData(); // run in background
       }
     } catch (e) {
       toast.error('Failed to save staff record.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleBatchSubmit = async (data: any) => {
+    if (isSaving) { toast.error('Save already in progress, please wait.'); return; }
+    setIsSaving(true);
     try {
       let res;
       if (batchModal.editRecord) {
@@ -431,14 +452,18 @@ export const CoachingDashboard: React.FC = () => {
       if (res.data.success) {
         toast.success('Coaching batch schedule saved.');
         setBatchModal({ open: false, editRecord: null });
-        fetchData();
+        fetchData(); // run in background
       }
     } catch (e) {
       toast.error('Failed to save batch.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleExamSubmit = async (data: any) => {
+    if (isSaving) { toast.error('Save already in progress, please wait.'); return; }
+    setIsSaving(true);
     try {
       const payload = {
         ...data,
@@ -455,15 +480,19 @@ export const CoachingDashboard: React.FC = () => {
       if (res.data.success) {
         toast.success(examModal.editRecord ? 'Exam template updated.' : 'Exam template generated.');
         setExamModal({ open: false, editRecord: null });
-        fetchData();
+        fetchData(); // run in background
       }
     } catch (e) {
       toast.error('Failed to save exam template.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   // Inline Fee payment collector
   const handleCollectFeeSubmit = async (data: any) => {
+    if (isSaving) { toast.error('Save already in progress, please wait.'); return; }
+    setIsSaving(true);
     try {
       const payload = {
         ...feeRecordModal.record,
@@ -489,10 +518,12 @@ export const CoachingDashboard: React.FC = () => {
           const refreshRes = await apiClient.get(`/coaching/fees/monthly?monthYear=${selectedFeeMonth}`);
           if (refreshRes.data.success) setMonthlyFeeCollection(refreshRes.data.data);
         }
-        fetchData();
+        fetchData(); // run in background
       }
     } catch (e) {
       toast.error('Fee collection failed.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -668,12 +699,12 @@ export const CoachingDashboard: React.FC = () => {
       {/* Sub tabs */}
       <div className="flex flex-wrap gap-2 pb-4 border-b border-brand-border/40 print-hidden">
         {[
+          { key: 'dashboard', label: 'Dashboard Summary', icon: BarChart2 },
           { key: 'students', label: 'Coaching Students Register', icon: Users },
           { key: 'fees', label: 'Tuition Fee Management', icon: Wallet },
-          { key: 'batches', label: 'Batch Planner', icon: GraduationCap },
-          { key: 'attendance', label: 'Attendance Register', icon: Calendar },
+          { key: 'attendance', label: 'Attendance Register', icon: ClipboardList },
           { key: 'staff', label: 'Teachers Registry', icon: User },
-          { key: 'exams', label: 'Exams & Scorecards', icon: ClipboardList },
+          { key: 'exams', label: 'Exams & Results', icon: BookOpen },
           { key: 'analytics', label: 'Revenue Analytics', icon: BarChart2 },
           { key: 'expenses', label: 'Expense Tracker', icon: Wallet }
         ].map((tab) => {
@@ -698,14 +729,117 @@ export const CoachingDashboard: React.FC = () => {
         })}
       </div>
 
-      {/* Hero cards expected vs collected */}
-      {analytics && activeTab !== 'attendance' && (
-        <RevenueHeroCard
-          collected={analytics.totalCollected}
-          pending={analytics.totalPending}
-          growthRate={22.5}
-          type="coaching"
-        />
+      {/* =======================================================================
+          TAB 0: DASHBOARD SUMMARY
+          ======================================================================= */}
+      {activeTab === 'dashboard' && dashboardSummary && (
+        <div className="space-y-6">
+          {/* Key Metrics Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-brand-card/60 border border-brand-border/60 rounded-2xl p-4 shadow-sm">
+              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total Students</p>
+              <h3 className="text-2xl font-black text-white mt-1">{dashboardSummary.keyMetrics.totalStudents}</h3>
+              <p className="text-emerald-400 text-xs font-semibold mt-1">{dashboardSummary.keyMetrics.activeStudents} Active</p>
+            </div>
+            <div className="bg-brand-card/60 border border-brand-border/60 rounded-2xl p-4 shadow-sm">
+              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total Billed to Date</p>
+              <h3 className="text-2xl font-black text-white mt-1">{formatINR(dashboardSummary.keyMetrics.billedToDate)}</h3>
+              <p className="text-slate-500 text-[10px] font-semibold mt-1">Expected: {formatINR(dashboardSummary.keyMetrics.monthlyFeeExpected)} / month</p>
+            </div>
+            <div className="bg-brand-card/60 border border-brand-border/60 rounded-2xl p-4 shadow-sm">
+              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total Collected</p>
+              <h3 className="text-2xl font-black text-emerald-400 mt-1">{formatINR(dashboardSummary.keyMetrics.totalCollected)}</h3>
+              <p className="text-emerald-500/80 text-[10px] font-semibold mt-1">{dashboardSummary.keyMetrics.collectionPercentage}% Collection Rate</p>
+            </div>
+            <div className="bg-brand-card/60 border border-brand-border/60 rounded-2xl p-4 shadow-sm">
+              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total Outstanding</p>
+              <h3 className="text-2xl font-black text-rose-400 mt-1">{formatINR(dashboardSummary.keyMetrics.totalOutstanding)}</h3>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* By Standard Table */}
+            <div className="bg-brand-card/60 border border-brand-border/60 rounded-2xl p-5 shadow-sm">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-heading mb-4">By Standard</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-brand-border/40 text-[10px] uppercase text-slate-500 tracking-wider">
+                      <th className="p-2 font-bold">Standard</th>
+                      <th className="p-2 font-bold text-center">Students</th>
+                      <th className="p-2 font-bold text-right">Billed (₹)</th>
+                      <th className="p-2 font-bold text-right text-emerald-500">Collected (₹)</th>
+                      <th className="p-2 font-bold text-right text-rose-500">Due (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-brand-border/20">
+                    {dashboardSummary.byStandard.filter((s: any) => s.students > 0 || s.billed > 0).map((row: any) => (
+                      <tr key={row.standard} className="hover:bg-slate-800/10">
+                        <td className="p-2 text-white font-bold">{row.standard}</td>
+                        <td className="p-2 text-slate-300 text-center">{row.students}</td>
+                        <td className="p-2 text-slate-300 text-right">{row.billed.toLocaleString('en-IN')}</td>
+                        <td className="p-2 text-emerald-400 text-right font-semibold">{row.collected.toLocaleString('en-IN')}</td>
+                        <td className="p-2 text-rose-400 text-right font-semibold">{row.due.toLocaleString('en-IN')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* By Medium Table */}
+              <div className="bg-brand-card/60 border border-brand-border/60 rounded-2xl p-5 shadow-sm">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-heading mb-4">By Medium</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-brand-border/40 text-[10px] uppercase text-slate-500 tracking-wider">
+                        <th className="p-2 font-bold">Medium</th>
+                        <th className="p-2 font-bold text-center">Students</th>
+                        <th className="p-2 font-bold text-right text-emerald-500">Collected (₹)</th>
+                        <th className="p-2 font-bold text-right text-rose-500">Due (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-brand-border/20">
+                      {dashboardSummary.byMedium.map((row: any) => (
+                        <tr key={row.medium} className="hover:bg-slate-800/10">
+                          <td className="p-2 text-white font-bold">{row.medium}</td>
+                          <td className="p-2 text-slate-300 text-center">{row.students}</td>
+                          <td className="p-2 text-emerald-400 text-right font-semibold">{row.collected.toLocaleString('en-IN')}</td>
+                          <td className="p-2 text-rose-400 text-right font-semibold">{row.due.toLocaleString('en-IN')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Staff & Salary summary */}
+              <div className="bg-brand-card/60 border border-brand-border/60 rounded-2xl p-5 shadow-sm">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-heading mb-4">Staff & Salary Overview</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-slate-500 text-[10px] font-bold uppercase">Total Staff</p>
+                    <p className="text-white text-sm font-black mt-0.5">{dashboardSummary.staffSalary.totalStaff}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-[10px] font-bold uppercase">Monthly Salary</p>
+                    <p className="text-white text-sm font-black mt-0.5">{formatINR(dashboardSummary.staffSalary.monthlySalaryFull)}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-[10px] font-bold uppercase">Monthly Salary Bill</p>
+                    <p className="text-rose-400 text-sm font-black mt-0.5">{formatINR(dashboardSummary.staffSalary.monthlySalaryFull)}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-[10px] font-bold uppercase">Gross Revenue</p>
+                    <p className="text-emerald-400 text-sm font-black mt-0.5">{formatINR(dashboardSummary.keyMetrics.totalCollected)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* =======================================================================
@@ -751,8 +885,7 @@ export const CoachingDashboard: React.FC = () => {
 
             <button
               onClick={() => {
-                reset({ monthly_fee: 3000 });
-                setValue('enrollment_date', new Date().toISOString().split('T')[0]);
+                reset({ student_name: '', father_name: '', mother_name: '', whatsapp_number: '', phone_number: '', parent_mobile: '', student_mobile: '', standard: '', section: '', school_name: '', medium: '', board: '', department: '', subjects_enrolled: '', monthly_fee: 3000, status: 'Active', notes: '', enrollment_date: new Date().toISOString().split('T')[0] });
                 setStudentModal({ open: true, editRecord: null });
               }}
               className="flex items-center gap-1.5 px-4 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl text-xs font-black uppercase text-white shadow-md transition-all"
@@ -838,31 +971,47 @@ export const CoachingDashboard: React.FC = () => {
                       <td className="p-4 text-slate-400">{formatDateStr(s.enrollment_date)}</td>
                       <td className="p-4">
                         <StatusBadge status={s.status} />
-                        {(s.attendance_percentage !== undefined) && (
-                          <div className="mt-1 flex items-center gap-1 text-[9px] font-bold">
-                            <span className={s.attendance_percentage >= 75 ? 'text-emerald-500' : s.attendance_percentage >= 50 ? 'text-amber-500' : 'text-rose-500'}>
-                              {s.attendance_percentage}% Attendance
-                            </span>
-                          </div>
-                        )}
                       </td>
                       <td className="p-4 text-center">
                         <WhatsAppButton mobile={whatsappContact || ''} />
                       </td>
                       <td className="p-4 text-right print-hidden space-x-1.5 whitespace-nowrap">
+                        <div className="relative inline-block group mr-1.5 text-left">
+                          <button
+                            className="p-1 text-slate-400 hover:text-green-400 rounded hover:bg-slate-800 focus:outline-none"
+                            title="Call..."
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                          </button>
+                          <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block w-36 bg-slate-800 border border-brand-border/60 rounded-lg shadow-lg z-50 overflow-hidden">
+                            <div className="py-1">
+                              {s.father_name && s.parent_mobile ? (
+                                <a href={`tel:${s.parent_mobile}`} className="block px-3 py-1.5 text-[10px] font-bold text-slate-300 hover:bg-slate-700 hover:text-white">
+                                  Call Father
+                                </a>
+                              ) : null}
+                              {s.mother_name && s.phone_number ? (
+                                <a href={`tel:${s.phone_number}`} className="block px-3 py-1.5 text-[10px] font-bold text-slate-300 hover:bg-slate-700 hover:text-white">
+                                  Call Mother
+                                </a>
+                              ) : null}
+                              {s.student_mobile ? (
+                                <a href={`tel:${s.student_mobile}`} className="block px-3 py-1.5 text-[10px] font-bold text-slate-300 hover:bg-slate-700 hover:text-white">
+                                  Call Student
+                                </a>
+                              ) : null}
+                              {!(s.parent_mobile || s.phone_number || s.student_mobile) && (
+                                <span className="block px-3 py-1.5 text-[10px] font-bold text-slate-500">No Numbers</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                         <button
                           onClick={() => handleLoadStudentFeeHistory(s)}
                           className="p-1 text-slate-400 hover:text-brand-coaching rounded hover:bg-slate-800"
                           title="View tuition payments"
                         >
                           <Wallet className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleLoadStudentReportCard(s)}
-                          className="p-1 text-slate-400 hover:text-indigo-400 rounded hover:bg-slate-800"
-                          title="View student report card"
-                        >
-                          <Award className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => {
@@ -899,11 +1048,10 @@ export const CoachingDashboard: React.FC = () => {
           ======================================================================= */}
       {activeTab === 'fees' && (
         <div className="space-y-5">
-          {/* Sub menu controls */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-brand-border/20 print-hidden">
             {[
-              { key: 'monthly', label: 'Monthly Collection Matrix' },
-              { key: 'overdue', label: 'Overdue Dues List' }
+              { key: 'monthly', label: 'Monthly Grid' },
+              { key: 'overdue', label: 'Pending Payments' }
             ].map(tab => (
               <button
                 key={tab.key}
@@ -1005,7 +1153,7 @@ export const CoachingDashboard: React.FC = () => {
                           <td className="p-4 text-right print-hidden">
                             {record.status !== 'Paid' ? (
                               <button
-                                onClick={() => setFeeRecordModal({ open: true, record })}
+                                onClick={() => { reset({ payment_mode: 'Cash', receipt_number: '', paid_date: new Date().toISOString().split('T')[0], notes: '' }); setFeeRecordModal({ open: true, record }); }}
                                 className="px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-brand-coaching hover:bg-brand-coaching/85 text-white shadow"
                               >
                                 Collect Fee
@@ -1124,7 +1272,7 @@ export const CoachingDashboard: React.FC = () => {
                         <td className="p-4 text-right print-hidden">
                           {fee.status !== 'Paid' ? (
                             <button
-                              onClick={() => setFeeRecordModal({ open: true, record: { ...fee, student_name: selectedStudentForFees.student_name, monthly_fee: fee.fee_amount } })}
+                              onClick={() => { reset({ payment_mode: 'Cash', receipt_number: '', paid_date: new Date().toISOString().split('T')[0], notes: '' }); setFeeRecordModal({ open: true, record: { ...fee, student_name: selectedStudentForFees.student_name, monthly_fee: fee.fee_amount } }); }}
                               className="px-2.5 py-1 rounded bg-brand-coaching hover:bg-brand-coaching/80 text-white font-black"
                             >
                               Collect Fee
@@ -1146,84 +1294,6 @@ export const CoachingDashboard: React.FC = () => {
             </div>
           )}
 
-        </div>
-      )}
-
-      {/* =======================================================================
-          TAB 3: BATCH PLANNER
-          ======================================================================= */}
-      {activeTab === 'batches' && (
-        <div className="space-y-5">
-          <div className="flex items-center justify-between print-hidden">
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest font-heading">
-              Coaching Batches Scheduler
-            </h3>
-            <button
-              onClick={() => {
-                reset({ capacity: 25 });
-                setBatchModal({ open: true, editRecord: null });
-              }}
-              className="flex items-center gap-1.5 px-4 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl text-xs font-black uppercase text-white shadow-md"
-            >
-              <Plus className="w-4.5 h-4.5" />
-              Create Batch
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {batches.map((b) => {
-              const activeCount = b.active_count || 0;
-              
-              return (
-                <div key={b.batch_id} className="rounded-2xl border border-brand-border/60 bg-brand-card p-5 space-y-4 hover:border-brand-coaching/40 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-bold text-white font-heading">{b.batch_name}</h4>
-                      <p className="text-[10px] text-brand-coaching mt-0.5">{b.standard} Standard | {b.subject || 'All Subjects'}</p>
-                    </div>
-                    <StatusBadge status={b.status} />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs font-semibold bg-brand-dark/40 border border-brand-border/20 rounded-xl p-3">
-                    <div>
-                      <p className="text-[9px] text-slate-500 uppercase">Timing Slot</p>
-                      <p className="text-slate-300 mt-0.5">{b.time_slot || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-slate-500 uppercase">Schedule Days</p>
-                      <p className="text-slate-300 mt-0.5">{b.schedule_days || '-'}</p>
-                    </div>
-                    <div className="col-span-2 border-t border-brand-border/20 mt-2 pt-2 flex justify-between items-center text-[10px] font-bold">
-                      <span className="text-slate-500">ENROLLED CAPACITY:</span>
-                      <span className="text-brand-coaching">{activeCount} / {b.capacity} Students</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-brand-border/20 text-[10px] font-bold text-slate-500">
-                    <span>Teacher: {b.teacher_name || '-'}</span>
-                    
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => {
-                          reset(b);
-                          setBatchModal({ open: true, editRecord: b });
-                        }}
-                        className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-brand-coaching"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteBatch(b.batch_id)}
-                        className="p-1 rounded hover:bg-rose-950/20 text-slate-400 hover:text-rose-400"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
       )}
 
@@ -1327,7 +1397,7 @@ export const CoachingDashboard: React.FC = () => {
             </h3>
             <button
               onClick={() => {
-                reset({ monthly_salary: 20000 });
+                reset({ staff_name: '', mobile: '', email: '', subject_specialization: '', standards_taught: '', monthly_salary: 20000, status: 'Active', notes: '', joining_date: '' });
                 setStaffModal({ open: true, editRecord: null });
               }}
               className="flex items-center gap-1.5 px-4 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl text-xs font-black uppercase text-white shadow-md"
@@ -1427,8 +1497,7 @@ export const CoachingDashboard: React.FC = () => {
                 
                 <button
                   onClick={() => {
-                    reset({ total_marks: 100 });
-                    setValue('exam_date', new Date().toISOString().split('T')[0]);
+                    reset({ exam_name: '', standard: '', subject: '', total_marks: 100, exam_date: new Date().toISOString().split('T')[0] });
                     setExamModal({ open: true, editRecord: null });
                   }}
                   className="flex items-center gap-1.5 px-4 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl text-xs font-black uppercase text-white shadow-md"
@@ -2096,9 +2165,9 @@ export const CoachingDashboard: React.FC = () => {
                   className="px-4 py-2 rounded-xl border border-brand-border hover:bg-slate-800 text-slate-400 hover:text-slate-200">
                   Cancel
                 </button>
-                <button type="submit"
-                  className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md">
-                  Save Profile
+                <button type="submit" disabled={isSaving}
+                  className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isSaving ? 'Saving…' : 'Save Profile'}
                 </button>
               </div>
             </form>
@@ -2213,10 +2282,10 @@ export const CoachingDashboard: React.FC = () => {
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md"
+                  type="submit" disabled={isSaving}
+                  className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save Profile
+                  {isSaving ? 'Saving…' : 'Save Profile'}
                 </button>
               </div>
             </form>
@@ -2350,10 +2419,10 @@ export const CoachingDashboard: React.FC = () => {
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md"
+                  type="submit" disabled={isSaving}
+                  className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save Batch
+                  {isSaving ? 'Saving…' : 'Save Batch'}
                 </button>
               </div>
             </form>
@@ -2438,10 +2507,10 @@ export const CoachingDashboard: React.FC = () => {
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md"
+                  type="submit" disabled={isSaving}
+                  className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Generate Template
+                  {isSaving ? 'Saving…' : 'Generate Template'}
                 </button>
               </div>
             </form>
@@ -2542,10 +2611,10 @@ export const CoachingDashboard: React.FC = () => {
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md"
+                  type="submit" disabled={isSaving}
+                  className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Approve Collection
+                  {isSaving ? 'Saving…' : 'Approve Collection'}
                 </button>
               </div>
             </form>

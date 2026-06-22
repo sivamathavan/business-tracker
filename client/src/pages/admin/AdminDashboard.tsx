@@ -72,8 +72,6 @@ const EXPENSE_CATEGORIES = [
 
 const PAYMENT_MODES = ['Cash', 'UPI', 'Bank Transfer', 'Card'];
 
-import { BUSINESS_OPTIONS, getBizLabel } from '../../utils/constants';
-
 const CATEGORY_ICONS: Record<string, React.FC<any>> = {
   Petrol: Fuel,
   Rent: Home,
@@ -980,6 +978,16 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(m => ({ ...m, open: false }))}
+        danger={confirmModal.danger}
+        requireTyping={confirmModal.requireTyping}
+        confirmText={confirmModal.confirmText}
+      />
     </div>
   );
 };

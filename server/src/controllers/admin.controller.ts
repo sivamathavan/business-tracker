@@ -371,6 +371,7 @@ export const resetBusinessData = async (req: AuthenticatedRequest, res: Response
       message: `All database items belonging to the "${slug}" pipeline have been cleared.`
     });
   } catch (error) {
+    console.error('resetBusinessData failed for slug:', req.body?.slug, error);
     next(error);
   }
 };
@@ -604,8 +605,13 @@ export const exportBackup = async (req: AuthenticatedRequest, res: Response, nex
       TrainingFeeInstallment: await prisma.trainingFeeInstallment.findMany(),
       TrainingAttendance: await prisma.trainingAttendance.findMany(),
       CoachingStudent: await prisma.coachingStudent.findMany(),
+      CoachingStaff: await prisma.coachingStaff.findMany(),
+      CoachingBatch: await prisma.coachingBatch.findMany(),
       CoachingAttendance: await prisma.coachingAttendance.findMany(),
       CoachingFeeRecord: await prisma.coachingFeeRecord.findMany(),
+      CoachingExam: await prisma.coachingExam.findMany(),
+      CoachingResult: await prisma.coachingResult.findMany(),
+      CoachingEnrollment: await prisma.coachingEnrollment.findMany(),
       ActivityLog: await prisma.activityLog.findMany(),
     };
 

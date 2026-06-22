@@ -27,7 +27,8 @@ import {
   getCoachingAnalytics,
   autoGenerateMonthlyFees,
   getCoachingAttendance,
-  markCoachingAttendance
+  markCoachingAttendance,
+  getCoachingDashboardSummary
 } from '../controllers/coaching.controller';
 import { requireAuth, requireBusiness } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -43,7 +44,6 @@ router.post(
   '/students',
   [
     body('student_name').trim().notEmpty().withMessage('Student name is required'),
-    body('parent_mobile').trim().notEmpty().withMessage('Parent mobile is required'),
     body('standard').trim().notEmpty().withMessage('Standard standard is required'),
     body('monthly_fee').isNumeric().withMessage('Monthly fee must be a number'),
     body('status').isIn(['Active', 'Inactive', 'Completed']),
@@ -133,5 +133,6 @@ router.post('/attendance', markCoachingAttendance);
 
 
 router.get('/analytics', getCoachingAnalytics);
+router.get('/dashboard-summary', getCoachingDashboardSummary);
 
 export default router;
