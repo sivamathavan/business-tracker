@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
-import { 
-  Plus, Search, Edit2, Trash2, Calendar, CalendarDays, User, DollarSign, 
-  FileText, BarChart2, Sparkles, BookOpen, Clock, Users, ShieldAlert,
+import {
+  Plus, Search, Edit2, Trash2, CalendarDays, User, DollarSign,
+  FileText, BarChart2, Sparkles, Clock, Users, ShieldAlert,
   Percent, AlertTriangle, Printer, Check, Phone, Wallet, GraduationCap, ClipboardList, RefreshCw
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RePie, Pie, Cell } from 'recharts';
@@ -68,38 +68,15 @@ interface Staff {
   status: 'Active' | 'Inactive';
 }
 
-interface Batch {
-  batch_id: string;
-  batch_name: string;
-  standard: string;
-  subject: string | null;
-  teacher_name: string | null;
-  schedule_days: string | null;
-  time_slot: string | null;
-  room_number: string | null;
-  capacity: number;
-  status: 'Active' | 'Holiday' | 'Completed';
-  active_count?: number;
-}
-
-interface Exam {
-  exam_id: string;
-  exam_name: string;
-  standard: string;
-  subject: string | null;
-  exam_date: string | null;
-  total_marks: number;
-}
 
 export const CoachingDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'fees' | 'staff' | 'analytics' | 'expenses' | 'attendance' | 'exams'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'fees' | 'staff' | 'analytics' | 'expenses' | 'attendance'>('dashboard');
 
   // Data States
   const [dashboardSummary, setDashboardSummary] = useState<any>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
+
   const [analytics, setAnalytics] = useState<any>(null);
   const [growthRate, setGrowthRate] = useState<number | null>(null);
   
@@ -145,18 +122,13 @@ export const CoachingDashboard: React.FC = () => {
   const [monthlyFeeCollection, setMonthlyFeeCollection] = useState<any[]>([]);
   const [overdueFeesList, setOverdueFeesList] = useState<any[]>([]);
 
-  // Exam Views
-  const [examView, setExamView] = useState<'templates' | 'marksheet' | 'report-card'>('templates');
-  const [selectedExamForMarks, setSelectedExamForMarks] = useState<Exam | null>(null);
-  const [examMarksheet, setExamMarksheet] = useState<any[]>([]);
-  const [selectedStudentForReport, setSelectedStudentForReport] = useState<Student | null>(null);
-  const [studentReportCard, setStudentReportCard] = useState<any[]>([]);
+  // Student form parent toggle
+  const [hasParent, setHasParent] = useState(true);
 
   // Modals state
   const [studentModal, setStudentModal] = useState<{ open: boolean; editRecord: Student | null }>({ open: false, editRecord: null });
   const [staffModal, setStaffModal] = useState<{ open: boolean; editRecord: Staff | null }>({ open: false, editRecord: null });
-  const [batchModal, setBatchModal] = useState<{ open: boolean; editRecord: Batch | null }>({ open: false, editRecord: null });
-  const [examModal, setExamModal] = useState<{ open: boolean; editRecord: Exam | null }>({ open: false, editRecord: null });
+
   const [feeRecordModal, setFeeRecordModal] = useState<{ open: boolean; record: any | null }>({ open: false, record: null });
 
   const { register, handleSubmit, reset, setValue } = useForm();
@@ -178,26 +150,6 @@ export const CoachingDashboard: React.FC = () => {
       if (res.data.success) setStaff(res.data.data);
     } catch (e) {
       toast.error('Failed to load staff.');
-    }
-  };
-
-  const fetchBatches = async () => {
-    if (batches.length > 0) return;
-    try {
-      const res = await apiClient.get('/coaching/batches');
-      if (res.data.success) setBatches(res.data.data);
-    } catch (e) {
-      toast.error('Failed to load batches.');
-    }
-  };
-
-  const fetchExams = async () => {
-    if (exams.length > 0) return;
-    try {
-      const res = await apiClient.get('/coaching/exams');
-      if (res.data.success) setExams(res.data.data);
-    } catch (e) {
-      toast.error('Failed to load exams.');
     }
   };
 
@@ -227,7 +179,6 @@ export const CoachingDashboard: React.FC = () => {
     Promise.all([fetchDashboardSummary(), fetchStudents(), fetchAnalytics()]).finally(() => {
       if (isMounted) setLoading(false);
     });
-    // Silent background load
     fetchOverdueBackground();
     return () => { isMounted = false; };
   }, []);
@@ -238,8 +189,8 @@ export const CoachingDashboard: React.FC = () => {
   // Lazy load by tab — 'dashboard' is excluded because the boot effect always fetches it
   useEffect(() => {
     if (activeTab === 'students' || activeTab === 'attendance') fetchStudents();
+    if (activeTab === 'attendance') fetchAttendance(attendanceDate);
     else if (activeTab === 'staff') fetchStaff();
-    else if (activeTab === 'exams') fetchExams();
   }, [activeTab]);
 
   useEffect(() => {
@@ -288,19 +239,16 @@ export const CoachingDashboard: React.FC = () => {
   };
 
   const fetchData = async () => {
-    // Force refresh all key data for the dashboard without relying on local state cache
     try {
-      const [stuRes, stfRes, batRes, exmRes] = await Promise.all([
+      const [stuRes, stfRes] = await Promise.all([
         apiClient.get('/coaching/students'),
-        apiClient.get('/coaching/staff'),
-        apiClient.get('/coaching/batches'),
-        apiClient.get('/coaching/exams')
+        apiClient.get('/coaching/staff')
       ]);
       if (stuRes.data.success) setStudents(stuRes.data.data);
       if (stfRes.data.success) setStaff(stfRes.data.data);
-      if (batRes.data.success) setBatches(batRes.data.data);
-      if (exmRes.data.success) setExams(exmRes.data.data);
+      fetchDashboardSummary();
       fetchAnalytics();
+      fetchOverdueBackground();
     } catch (e) {
       console.error('Failed to refresh data', e);
     }
@@ -360,34 +308,6 @@ export const CoachingDashboard: React.FC = () => {
     }
   };
 
-  // Fetch marksheet for specific exam
-  const handleLoadExamMarksheet = async (exam: Exam) => {
-    setSelectedExamForMarks(exam);
-    setExamView('marksheet');
-    try {
-      const res = await apiClient.get(`/coaching/exams/${exam.exam_id}/marksheet`);
-      if (res.data.success) {
-        setExamMarksheet(res.data.marksheet);
-      }
-    } catch (e) {
-      toast.error('Failed to load marksheet.');
-    }
-  };
-
-  // Fetch student report card
-  const handleLoadStudentReportCard = async (student: Student) => {
-    setSelectedStudentForReport(student);
-    setExamView('report-card');
-    try {
-      const res = await apiClient.get(`/coaching/students/${student.student_id}/report-card`);
-      if (res.data.success) {
-        setStudentReportCard(res.data.reportCard);
-      }
-    } catch (e) {
-      toast.error('Failed to load report card details.');
-    }
-  };
-
   // --- SAVE FORM SUBMITS ---
   const handleStudentSubmit = async (data: any) => {
     if (isSaving) { toast.error('Save already in progress, please wait.'); return; }
@@ -443,56 +363,6 @@ export const CoachingDashboard: React.FC = () => {
     }
   };
 
-  const handleBatchSubmit = async (data: any) => {
-    if (isSaving) { toast.error('Save already in progress, please wait.'); return; }
-    setIsSaving(true);
-    try {
-      let res;
-      if (batchModal.editRecord) {
-        res = await apiClient.put(`/coaching/batches/${batchModal.editRecord.batch_id}`, data);
-      } else {
-        res = await apiClient.post('/coaching/batches', data);
-      }
-      if (res.data.success) {
-        toast.success('Coaching batch schedule saved.');
-        setBatchModal({ open: false, editRecord: null });
-        fetchData(); // run in background
-      }
-    } catch (e) {
-      toast.error('Failed to save batch.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleExamSubmit = async (data: any) => {
-    if (isSaving) { toast.error('Save already in progress, please wait.'); return; }
-    setIsSaving(true);
-    try {
-      const payload = {
-        ...data,
-        total_marks: Number(data.total_marks || 100)
-      };
-
-      let res;
-      if (examModal.editRecord) {
-        res = await apiClient.put(`/coaching/exams/${examModal.editRecord.exam_id}`, payload);
-      } else {
-        res = await apiClient.post('/coaching/exams', payload);
-      }
-
-      if (res.data.success) {
-        toast.success(examModal.editRecord ? 'Exam template updated.' : 'Exam template generated.');
-        setExamModal({ open: false, editRecord: null });
-        fetchData(); // run in background
-      }
-    } catch (e) {
-      toast.error('Failed to save exam template.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   // Inline Fee payment collector
   const handleCollectFeeSubmit = async (data: any) => {
     if (isSaving) { toast.error('Save already in progress, please wait.'); return; }
@@ -528,27 +398,6 @@ export const CoachingDashboard: React.FC = () => {
       toast.error('Fee collection failed.');
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  // Bulk marks entry submission
-  const handleSaveMarksheet = async () => {
-    if (!selectedExamForMarks) return;
-    const scores = examMarksheet
-      .filter(item => item.marks_scored !== null && item.marks_scored !== '')
-      .map(item => ({
-        student_id: item.student_id,
-        marks_scored: Number(item.marks_scored)
-      }));
-
-    try {
-      const res = await apiClient.post(`/coaching/exams/${selectedExamForMarks.exam_id}/marksheet`, { scores });
-      if (res.data.success) {
-        toast.success('Marksheet grades and ranks saved successfully.');
-        handleLoadExamMarksheet(selectedExamForMarks);
-      }
-    } catch (e) {
-      toast.error('Failed to save marksheet.');
     }
   };
 
@@ -628,28 +477,6 @@ export const CoachingDashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteBatch = async (id: string) => {
-    if (!window.confirm('Delete this coaching batch?')) return;
-    try {
-      await apiClient.delete(`/coaching/batches/${id}`);
-      toast.success('Batch deleted.');
-      fetchData();
-    } catch (e) {
-      toast.error('Delete failed.');
-    }
-  };
-
-  const handleDeleteExam = async (id: string) => {
-    if (!window.confirm('Delete this exam template? All result records will also be soft-deleted.')) return;
-    try {
-      await apiClient.delete(`/coaching/exams/${id}`);
-      toast.success('Exam template deleted.');
-      fetchData();
-    } catch (e) {
-      toast.error('Delete failed.');
-    }
-  };
-
   // --- FILTERING & SORTING LOGIC ---
   const filteredStudents = students.filter((s) => {
     const matchesSearch = s.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -709,8 +536,7 @@ export const CoachingDashboard: React.FC = () => {
           { key: 'students', label: 'Coaching Students Register', icon: Users },
           { key: 'fees', label: 'Tuition Fee Management', icon: Wallet },
           { key: 'attendance', label: 'Attendance Register', icon: ClipboardList },
-          { key: 'staff', label: 'Teachers Registry', icon: User },
-          { key: 'exams', label: 'Exams & Results', icon: BookOpen },
+{ key: 'staff', label: 'Teachers Registry', icon: User },
           { key: 'analytics', label: 'Revenue Analytics', icon: BarChart2 },
           { key: 'expenses', label: 'Expense Tracker', icon: Wallet }
         ].map((tab) => {
@@ -718,10 +544,7 @@ export const CoachingDashboard: React.FC = () => {
           return (
             <button
               key={tab.key}
-              onClick={() => {
-                setActiveTab(tab.key as any);
-                setExamView('templates');
-              }}
+              onClick={() => setActiveTab(tab.key as any)}
               className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 focus:outline-none ${
                 activeTab === tab.key
                   ? 'bg-brand-coaching/10 text-brand-coaching border border-brand-coaching/30 shadow-[0_0_10px_rgba(247,183,49,0.1)]'
@@ -891,7 +714,8 @@ export const CoachingDashboard: React.FC = () => {
 
             <button
               onClick={() => {
-                reset({ student_name: '', father_name: '', mother_name: '', whatsapp_number: '', phone_number: '', parent_mobile: '', student_mobile: '', standard: '', section: '', school_name: '', medium: '', board: '', department: '', subjects_enrolled: '', monthly_fee: 3000, status: 'Active', notes: '', enrollment_date: new Date().toISOString().split('T')[0] });
+                reset({ student_name: '', father_name: '', father_occupation: '', mother_name: '', mother_occupation: '', whatsapp_number: '', phone_number: '', parent_mobile: '', student_mobile: '', standard: '', section: '', school_name: '', medium: '', board: '', department: '', subjects_enrolled: '', monthly_fee: 3000, status: 'Active', notes: '', enrollment_date: new Date().toISOString().split('T')[0] });
+                setHasParent(true);
                 setStudentModal({ open: true, editRecord: null });
               }}
               className="flex items-center gap-1.5 px-4 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl text-xs font-black uppercase text-white shadow-md transition-all"
@@ -1023,6 +847,7 @@ export const CoachingDashboard: React.FC = () => {
                           onClick={() => {
                             reset(s);
                             if (s.enrollment_date) setValue('enrollment_date', s.enrollment_date.split('T')[0]);
+                            setHasParent(!!(s.father_name || s.mother_name));
                             setStudentModal({ open: true, editRecord: s });
                           }}
                           className="p-1 text-slate-400 hover:text-brand-coaching rounded hover:bg-slate-800"
@@ -1464,383 +1289,6 @@ export const CoachingDashboard: React.FC = () => {
       )}
 
       {/* =======================================================================
-          TAB 6: EXAMS & RESULTS MARK SHEET
-          ======================================================================= */}
-      {activeTab === 'exams' && (
-        <div className="space-y-5">
-          {/* Sub Tab headers */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-brand-border/20 print-hidden">
-            {[
-              { key: 'templates', label: 'Exam Templates' },
-              { key: 'marksheet', label: 'Marks Entry Terminal' },
-              { key: 'report-card', label: 'Student Report Cards' }
-            ].map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => {
-                  setExamView(tab.key as any);
-                  if (tab.key !== 'marksheet') setSelectedExamForMarks(null);
-                  if (tab.key !== 'report-card') setSelectedStudentForReport(null);
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  examView === tab.key
-                    ? 'bg-brand-coaching/15 text-brand-coaching border border-brand-coaching/30'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* VIEW A: EXAM TEMPLATES */}
-          {examView === 'templates' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between print-hidden">
-                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest font-heading">
-                  Coaching Academic Exam Templates
-                </h3>
-                
-                <button
-                  onClick={() => {
-                    reset({ exam_name: '', standard: '', subject: '', total_marks: 100, exam_date: new Date().toISOString().split('T')[0] });
-                    setExamModal({ open: true, editRecord: null });
-                  }}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl text-xs font-black uppercase text-white shadow-md"
-                >
-                  <Plus className="w-4.5 h-4.5" />
-                  Generate Exam Template
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {exams.map((exam) => (
-                  <div key={exam.exam_id} className="rounded-2xl border border-brand-border/60 bg-brand-card p-5 space-y-4 hover:border-brand-coaching/40 transition-colors">
-                    <div>
-                      <h4 className="text-sm font-bold text-white font-heading">{exam.exam_name}</h4>
-                      <p className="text-[10px] text-brand-coaching mt-0.5">{exam.standard} Standard | Subject: {exam.subject || 'All'}</p>
-                    </div>
-
-                    <div className="flex justify-between items-center bg-brand-dark/40 border border-brand-border/20 rounded-xl p-3 text-xs font-bold">
-                      <span className="text-slate-500">Total Marks:</span>
-                      <span className="text-slate-200">{exam.total_marks} Marks</span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-brand-border/20 text-[10px] font-bold text-slate-500">
-                      <span>Date: {formatDateStr(exam.exam_date)}</span>
-                      
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => {
-                            reset(exam);
-                            if (exam.exam_date) setValue('exam_date', String(exam.exam_date).split('T')[0]);
-                            setExamModal({ open: true, editRecord: exam });
-                          }}
-                          className="p-1.5 rounded-lg hover:bg-brand-coaching/20 text-slate-400 hover:text-brand-coaching transition-colors"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteExam(exam.exam_id)}
-                          className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-500 transition-colors"
-                          title="Delete Exam"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleLoadExamMarksheet(exam)}
-                          className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-brand-border ml-1"
-                        >
-                          Enter Marks
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* VIEW B: MARKSHEET ENTRY TERMINAL */}
-          {examView === 'marksheet' && selectedExamForMarks && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between print-hidden">
-                <div>
-                  <h3 className="text-sm font-bold text-white font-heading">
-                    Marksheet Entry Terminal: <span className="text-brand-coaching">{selectedExamForMarks.exam_name}</span> ({selectedExamForMarks.standard} - {selectedExamForMarks.subject})
-                  </h3>
-                  <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
-                    Enter student scores directly into the grid. Grades and pass/fail states are computed as you type!
-                  </p>
-                </div>
-                
-                <button
-                  onClick={() => setExamView('templates')}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-750 text-slate-300 border border-brand-border/60"
-                >
-                  Back to Templates
-                </button>
-              </div>
-
-              <div className="overflow-x-auto bg-brand-card/75 border border-brand-border/60 rounded-3xl backdrop-blur-md">
-                <table className="w-full text-left text-xs font-semibold text-slate-300">
-                  <thead>
-                    <tr className="border-b border-brand-border/40 text-slate-400">
-                      <th className="p-4">Roll Number</th>
-                      <th className="p-4">Student Name</th>
-                      <th className="p-4 w-32">Marks Scored</th>
-                      <th className="p-4">Percentage</th>
-                      <th className="p-4">Assigned Grade</th>
-                      <th className="p-4">Rank</th>
-                      <th className="p-4">Result</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-brand-border/20">
-                    {examMarksheet.map((row, index) => {
-                      const total = selectedExamForMarks.total_marks;
-                      const getGrade = (marks: number) => {
-                        const pct = (marks / total) * 100;
-                        if (pct >= 90) return 'A+';
-                        if (pct >= 80) return 'A';
-                        if (pct >= 70) return 'B';
-                        if (pct >= 60) return 'C';
-                        if (pct >= 50) return 'D';
-                        return 'F';
-                      };
-
-                      return (
-                        <tr key={row.student_id} className="hover:bg-slate-800/10">
-                          <td className="p-4 text-brand-coaching font-bold">{row.roll_number}</td>
-                          <td className="p-4 text-white font-bold">{row.student_name}</td>
-                          <td className="p-4">
-                            <input
-                              type="number"
-                              max={total}
-                              value={row.marks_scored !== null ? row.marks_scored : ''}
-                              onChange={(e) => {
-                                const val = e.target.value !== '' ? Number(e.target.value) : null;
-                                const updated = [...examMarksheet];
-                                updated[index].marks_scored = val;
-                                if (val !== null) {
-                                  updated[index].percentage = Number(((val / total) * 100).toFixed(1));
-                                  updated[index].grade = getGrade(val);
-                                  updated[index].pass_fail = val >= (total * 0.35) ? 'Pass' : 'Fail';
-                                } else {
-                                  updated[index].percentage = null;
-                                  updated[index].grade = null;
-                                  updated[index].pass_fail = null;
-                                }
-                                setExamMarksheet(updated);
-                              }}
-                              placeholder={`/ ${total}`}
-                              className="w-full max-w-[100px] p-2 bg-slate-950 border border-brand-border rounded-xl text-center text-xs text-white font-bold focus:outline-none focus:border-brand-coaching"
-                            />
-                          </td>
-                          <td className="p-4 text-slate-300">
-                            {row.percentage !== null ? `${row.percentage}%` : '-'}
-                          </td>
-                          <td className="p-4">
-                            {row.grade ? (
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-black border ${
-                                row.grade === 'A+' || row.grade === 'A' ? 'bg-emerald-950/20 text-emerald-400 border border-emerald-900/30' :
-                                row.grade === 'F' ? 'bg-rose-950/20 text-rose-400 border border-rose-900/30' :
-                                'bg-slate-800 text-slate-400 border border-slate-700/60'
-                              }`}>
-                                {row.grade}
-                              </span>
-                            ) : '-'}
-                          </td>
-                          <td className="p-4 font-bold text-slate-300">{row.rank ? `# ${row.rank}` : '-'}</td>
-                          <td className="p-4">
-                            {row.pass_fail ? (
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
-                                row.pass_fail === 'Pass' ? 'bg-emerald-950/20 text-emerald-400' : 'bg-rose-950/20 text-rose-400'
-                              }`}>
-                                {row.pass_fail}
-                              </span>
-                            ) : '-'}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Action save trigger */}
-              <div className="flex justify-end pt-4 print-hidden">
-                <button
-                  onClick={handleSaveMarksheet}
-                  className="flex items-center gap-1.5 px-6 py-2.5 bg-brand-coaching hover:bg-brand-coaching/85 text-white font-black rounded-xl shadow-lg transition-all"
-                >
-                  <Check className="w-4.5 h-4.5" />
-                  Save Scores Registry
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* VIEW C: STUDENT REPORT CARD DETAILS */}
-          {examView === 'report-card' && (
-            <div className="space-y-5">
-              
-              {/* Select Student Selector (only shown if not selected yet) */}
-              {!selectedStudentForReport && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {students.map(s => (
-                    <button
-                      key={s.student_id}
-                      onClick={() => handleLoadStudentReportCard(s)}
-                      className="rounded-2xl border border-brand-border/60 bg-brand-card p-4 hover:border-indigo-500/40 text-left space-y-2 hover:-translate-y-0.5 transition-all duration-200"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                          <User className="w-4 h-4" />
-                        </div>
-                        <h4 className="text-xs font-bold text-white truncate max-w-[180px]">{s.student_name}</h4>
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-semibold">{s.standard} Standard | section {s.section}</p>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Render printable scorecard template */}
-              {selectedStudentForReport && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between print-hidden">
-                    <button
-                      onClick={() => setSelectedStudentForReport(null)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-750 text-slate-300 border border-brand-border/60"
-                    >
-                      Back to Student List
-                    </button>
-                    
-                    <button
-                      onClick={handlePrintReportCard}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow transition-all"
-                    >
-                      <Printer className="w-4.5 h-4.5" />
-                      Print Report Card
-                    </button>
-                  </div>
-
-                  {/* Print Template body */}
-                  <div className="rounded-3xl border border-brand-border/60 bg-brand-card p-6 md:p-8 space-y-6 shadow-xl print-container print-area">
-                    
-                    {/* Header */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-brand-border/40 pb-5">
-                      <div className="text-left">
-                        <h2 className="text-lg md:text-xl font-extrabold text-white font-heading">
-                          ⚡ AchieversNest
-                        </h2>
-                        <p className="text-xs text-slate-400 mt-1 font-semibold">
-                          Tambaram West, Chennai | Academic Report Card
-                        </p>
-                      </div>
-                      <div className="text-left md:text-right text-xs font-bold text-slate-400 space-y-1">
-                        <p>Academic Term: <span className="text-slate-200">2025 - 2026</span></p>
-                        <p>Generate Date: <span className="text-slate-200">{new Date().toLocaleDateString()}</span></p>
-                      </div>
-                    </div>
-
-                    {/* Student metadata info */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-brand-dark/40 border border-brand-border/20 rounded-2xl p-4 text-xs font-semibold">
-                      <div>
-                        <p className="text-[9px] text-slate-500 uppercase tracking-wider">Student Name</p>
-                        <p className="text-white font-bold mt-0.5">{selectedStudentForReport.student_name}</p>
-                      </div>
-                      <div>
-                        <p className="text-[9px] text-slate-500 uppercase tracking-wider">Standard & Class</p>
-                        <p className="text-brand-coaching font-bold mt-0.5">{selectedStudentForReport.standard} - Section {selectedStudentForReport.section || 'A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-[9px] text-slate-500 uppercase tracking-wider">School Name</p>
-                        <p className="text-slate-300 mt-0.5">{selectedStudentForReport.school_name || 'Boarding School'}</p>
-                      </div>
-                      <div>
-                        <p className="text-[9px] text-slate-500 uppercase tracking-wider">Father Name</p>
-                        <p className="text-slate-300 mt-0.5">{selectedStudentForReport.father_name || '-'}</p>
-                      </div>
-                    </div>
-
-                    {/* Report Card marks table */}
-                    <div className="overflow-x-auto border border-brand-border/40 rounded-2xl">
-                      <table className="w-full text-left text-xs font-semibold text-slate-300">
-                        <thead>
-                          <tr className="bg-brand-border/10 text-slate-400 border-b border-brand-border/40">
-                            <th className="p-3">Exam Template</th>
-                            <th className="p-3">Subject</th>
-                            <th className="p-3">Exam Date</th>
-                            <th className="p-3">Total Marks</th>
-                            <th className="p-3">Marks Scored</th>
-                            <th className="p-3">Percentage</th>
-                            <th className="p-3">Rank</th>
-                            <th className="p-3">Grade</th>
-                            <th className="p-3 text-right">Result</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-brand-border/20">
-                          {studentReportCard.length === 0 ? (
-                            <tr>
-                              <td colSpan={9} className="p-8 text-center text-slate-500">
-                                No exam results mapped for this student.
-                              </td>
-                            </tr>
-                          ) : (
-                            studentReportCard.map((row) => (
-                              <tr key={row.exam_id} className="hover:bg-slate-800/10">
-                                <td className="p-3 text-white font-bold">{row.exam_name}</td>
-                                <td className="p-3 text-slate-300">{row.subject || 'Maths'}</td>
-                                <td className="p-3 text-slate-400">{formatDateStr(row.exam_date)}</td>
-                                <td className="p-3 text-slate-400">{row.total_marks}</td>
-                                <td className="p-3 text-white font-black">{row.marks_scored}</td>
-                                <td className="p-3 text-slate-300">{row.percentage}%</td>
-                                <td className="p-3 text-slate-300 font-bold"># {row.rank || '-'}</td>
-                                <td className="p-3">
-                                  <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${
-                                    row.grade === 'A+' || row.grade === 'A' ? 'bg-emerald-950/20 text-emerald-400 border border-emerald-900/30' :
-                                    row.grade === 'F' ? 'bg-rose-950/20 text-rose-400 border border-rose-900/30' :
-                                    'bg-slate-800 text-slate-400 border-slate-700/60'
-                                  }`}>
-                                    {row.grade}
-                                  </span>
-                                </td>
-                                <td className="p-3 text-right">
-                                  <span className={`px-2 py-0.5 rounded text-[9px] font-black ${
-                                    row.pass_fail === 'Pass' ? 'bg-emerald-950/20 text-emerald-400' : 'bg-rose-950/20 text-rose-400'
-                                  }`}>
-                                    {row.pass_fail}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Signatures */}
-                    <div className="pt-8 flex justify-between items-center text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                      <div className="border-t border-brand-border/40 w-44 pt-2 text-left">
-                        Parent Signature
-                      </div>
-                      <div className="border-t border-brand-border/40 w-44 pt-2 text-right">
-                        Center Principal
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-              )}
-
-            </div>
-          )}
-
-        </div>
-      )}
-
-      {/* =======================================================================
           TAB 7: REVENUE ANALYTICS
           ======================================================================= */}
       {activeTab === 'analytics' && analytics && (
@@ -2023,32 +1471,64 @@ export const CoachingDashboard: React.FC = () => {
                 />
               </div>
 
+              {/* Parent / Guardian Toggle */}
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={hasParent}
+                    onChange={(e) => {
+                      setHasParent(e.target.checked);
+                      if (!e.target.checked) {
+                        setValue('father_name', '');
+                        setValue('father_occupation', '');
+                        setValue('mother_name', '');
+                        setValue('mother_occupation', '');
+                        setValue('parent_mobile', '');
+                      }
+                    }}
+                    className="w-4 h-4 accent-brand-coaching"
+                  />
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Has Parent / Guardian</span>
+                </label>
+                {!hasParent && (
+                  <span className="text-[10px] text-amber-400 font-semibold">(Parent fields hidden)</span>
+                )}
+              </div>
+
               {/* Parent Details */}
-              <div>
-                <p className="text-[10px] text-brand-coaching uppercase tracking-widest font-black mb-3">Parent / Guardian Details</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Father Name</label>
-                    <input type="text" {...register('father_name')} placeholder="Father's full name"
-                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Father's Occupation</label>
-                    <input type="text" {...register('father_occupation')} placeholder="e.g. Cooli, Builder, Teacher"
-                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Mother Name</label>
-                    <input type="text" {...register('mother_name')} placeholder="Mother's full name"
-                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">Mother's Occupation</label>
-                    <input type="text" {...register('mother_occupation')} placeholder="e.g. House Wife, Tailor"
-                      className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+              {hasParent && (
+                <div>
+                  <p className="text-[10px] text-brand-coaching uppercase tracking-widest font-black mb-3">Parent / Guardian Details</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-slate-400 uppercase tracking-wider">Father Name</label>
+                      <input type="text" {...register('father_name')} placeholder="Father's full name"
+                        className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-slate-400 uppercase tracking-wider">Father's Occupation</label>
+                      <input type="text" {...register('father_occupation')} placeholder="e.g. Builder, Teacher"
+                        className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-slate-400 uppercase tracking-wider">Mother Name</label>
+                      <input type="text" {...register('mother_name')} placeholder="Mother's full name"
+                        className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-slate-400 uppercase tracking-wider">Mother's Occupation</label>
+                      <input type="text" {...register('mother_occupation')} placeholder="e.g. House Wife, Tailor"
+                        className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                    </div>
+                    <div className="space-y-1 col-span-2">
+                      <label className="text-[10px] text-slate-400 uppercase tracking-wider">Parent Mobile (Primary Contact)</label>
+                      <input type="tel" {...register('parent_mobile')} placeholder="Parent's call/WhatsApp number"
+                        className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching" />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Contact Numbers */}
               <div>
@@ -2103,8 +1583,9 @@ export const CoachingDashboard: React.FC = () => {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] text-slate-400 uppercase tracking-wider">Academic Standard *</label>
-                    <select {...register('standard')}
+                    <select {...register('standard', { required: true })}
                       className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none focus:border-brand-coaching">
+                      <option value="">Select Standard *</option>
                       {['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'].map(st => (
                         <option key={st} value={st}>{st} Standard</option>
                       ))}
@@ -2292,231 +1773,6 @@ export const CoachingDashboard: React.FC = () => {
                   className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSaving ? 'Saving…' : 'Save Profile'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* =======================================================================
-          MODAL: ADD/EDIT COACHING BATCH
-          ======================================================================= */}
-      {batchModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-dark/80 backdrop-blur-sm select-none">
-          <div className="w-full max-w-md bg-[#161623] border border-brand-border rounded-3xl p-6 shadow-2xl space-y-4">
-            <h3 className="text-base font-extrabold text-white font-heading">
-              {batchModal.editRecord ? 'Modify Batch Settings' : 'Create Coaching Batch'}
-            </h3>
-            
-            <form onSubmit={handleSubmit(handleBatchSubmit)} className="space-y-4 text-xs font-semibold">
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Batch Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Secondary Science Batch"
-                  {...register('batch_name')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">Target Standard</label>
-                  <select
-                    {...register('standard')}
-                    className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                  >
-                    {['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'].map(st => (
-                      <option key={st} value={st}>{st} Standard</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">Subject</label>
-                  <input
-                    type="text"
-                    placeholder="Science, Maths, English"
-                    {...register('subject')}
-                    className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">Teacher In-Charge</label>
-                  <select
-                    {...register('teacher_name')}
-                    className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                  >
-                    <option value="">Select teacher</option>
-                    {staff.map(t => (
-                      <option key={t.staff_id} value={t.staff_name}>{t.staff_name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">Room Identifier</label>
-                  <input
-                    type="text"
-                    placeholder="Room 102"
-                    {...register('room_number')}
-                    className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">Time Slot</label>
-                  <input
-                    type="text"
-                    placeholder="5:00 PM - 6:30 PM"
-                    {...register('time_slot')}
-                    className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">Batch Capacity</label>
-                  <input
-                    type="number"
-                    required
-                    {...register('capacity')}
-                    className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">Schedule Days</label>
-                  <input
-                    type="text"
-                    placeholder="Mon,Wed,Fri"
-                    {...register('schedule_days')}
-                    className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">Batch Status</label>
-                  <select
-                    {...register('status')}
-                    className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Holiday">Holiday</option>
-                    <option value="Completed">Completed</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setBatchModal({ open: false, editRecord: null })}
-                  className="px-4 py-2 rounded-xl border border-brand-border hover:bg-slate-800 text-slate-400 hover:text-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit" disabled={isSaving}
-                  className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSaving ? 'Saving…' : 'Save Batch'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* =======================================================================
-          MODAL: GENERATE EXAM TEMPLATE
-          ======================================================================= */}
-      {examModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-dark/80 backdrop-blur-sm select-none">
-          <div className="w-full max-w-md bg-[#161623] border border-brand-border rounded-3xl p-6 shadow-2xl space-y-4">
-            <h3 className="text-base font-extrabold text-white font-heading">
-              {examModal.editRecord ? 'Modify Exam Template' : 'Generate Exam Template'}
-            </h3>
-            
-            <form onSubmit={handleSubmit(handleExamSubmit)} className="space-y-4 text-xs font-semibold">
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider">Exam Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Unit Test 1, Quarterly"
-                  {...register('exam_name')}
-                  className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">Target Standard</label>
-                  <select
-                    {...register('standard')}
-                    className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                  >
-                    {['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'].map(st => (
-                      <option key={st} value={st}>{st} Standard</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">Subject</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Maths, Science"
-                    {...register('subject')}
-                    className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">Exam Date</label>
-                  <input
-                    type="date"
-                    {...register('exam_date')}
-                    className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">Total Marks</label>
-                  <input
-                    type="number"
-                    required
-                    {...register('total_marks')}
-                    className="w-full p-2.5 bg-slate-950 border border-brand-border rounded-xl text-slate-200 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setExamModal({ open: false, editRecord: null })}
-                  className="px-4 py-2 rounded-xl border border-brand-border hover:bg-slate-800 text-slate-400 hover:text-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit" disabled={isSaving}
-                  className="px-5 py-2 bg-brand-coaching hover:bg-brand-coaching/85 rounded-xl font-bold text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSaving ? 'Saving…' : 'Generate Template'}
                 </button>
               </div>
             </form>
